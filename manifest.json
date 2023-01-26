@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "lilimit",
+  "version": "1.0",
+  "description": "This extension is for digital life well being \
+  	which allow you add limits of visits per day or time for each visit \
+  	for any website",
+  "icons": "lily.png",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": "lily.png",
+    "default_popup": "popup.html"
+  }
+}
