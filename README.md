@@ -1,5 +1,5 @@
 # LiLimit
-![Logo](images/lily.png)
+![Logo](Images/lily.png)
 ## _The Chrome extension that will help you take over your time_ 
 
 ### A Chrome extension which allow you limit your time you spend and visits on any website as your choose.
