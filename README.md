@@ -18,4 +18,5 @@
 
 
 
-![Logo](images/lily.png)
+![Logo](Images/lily.png)
+(https://github.com/jonis100/LiLimit]/blob/main/lily.png?raw=true)
