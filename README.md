@@ -1,9 +1,7 @@
 # LiLimit
+## _The Chrome extension that will help you take over your time_ 
 
-An Open Source Chrome extension wichch allow you limit your time you spend and visits on any website s you choose.
-
-Make to take controle over your time.
-
+### A Chrome extension wichch allow you limit your time you spend and visits on any website s you choose.
 
 ## Installation and download (ongoing)
 
@@ -14,4 +12,10 @@ Make to take controle over your time.
 
 ### Manualy Dowload
 
-- Download the source code from [Github](https://github.com/jonis100/LiLimit)
+- Download the source code from [Github](https://github.com/jonis100/LiLimit) and extract it.
+- Go to chrome://extensions/ and check the box for Developer mode in the top right.
+- Go to the chrome://extensions/ page and click the Load unpacked extension button and select the unzipped folder for your extension to install it.
+
+
+
+![Logo](images/lily.png)
