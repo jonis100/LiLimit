@@ -1,14 +1,14 @@
 # LiLimit
 ![Logo](Images/lily.png)
-## _The Chrome extension that will help you take over your time_ 
+## _This Chrome extension will help you control your time_ 
 
-### A Chrome extension which allow you limit your time you spend and visits on any website as your choose.
+### Using this Chrome extension, you can limit how long you spend on any website and how many times you visit it.
 
-## Installation and download (ongoing)
+## Installation and download 
 
-### Google web store
+### Google web store (ongoing)
 
-- Searche LiLimit in [google chrome store](https://chrome.google.com/webstore/category/extensions)
+- Search for LiLimit in [google chrome store](https://chrome.google.com/webstore/category/extensions)
 - Install it
 
 ### Manualy Dowload

@@ -32,6 +32,7 @@ form.addEventListener("submit", (event) => {
   });
 });
 
+
 // Set up a listener for when the ShowLimits is clicked
 const ShowLimitsBtn = document.getElementById("ShowLimits");
 ShowLimitsBtn.addEventListener("click", (event) => {
@@ -42,14 +43,10 @@ ShowLimitsBtn.addEventListener("click", (event) => {
 		let response = await chrome.runtime.sendMessage({
 		type: "showLimits"
   	});
-  	alert(response.farewell)
+  	alert(response.limits)
   	})();
-	/*
- 	chrome.runtime.sendMessage({
-	type: "showLimits"
-  	});*/
-
 });
+
 
 // Set up a listener for when the DeleteLimits is clicked
 const DeleteLimitsBtn = document.getElementById("DeleteLimits");
@@ -57,7 +54,6 @@ DeleteLimitsBtn.addEventListener("click", (event) => {
 	event.preventDefault();
 	const hostname = document.getElementById("hostname").value;
   	alert(`Deleted all the limits on the hostname :\n ${hostname}`)
-  	//${timeLimit} sec \n ${visitLimit} visits`)
 // Send a message to the background script to delete the time and visit limits
   chrome.runtime.sendMessage({
     type: "deLimit",

@@ -2,17 +2,9 @@
 const visitCounts = {};
 const timeLimits = {};
 const visitLimits = {}; 
-/*
-console.log("Hi from background");
-console.log(visitLimits, timeLimits, visitCounts);
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  // Get the URL of the active tab
-  chrome.tabs.get(activeInfo.tabId, (tab) => {
-  console.log("tab: ", tab, "tab.url after man: ", getMainUrl(tab.url));
-  
-  });
-});
-*/
+
+
+// Extaract the hostname from URL
 function extractHostname(url){
 	var url = new URL(url);
 	var hostname = url.hostname;
@@ -21,13 +13,6 @@ function extractHostname(url){
 		return hostname
 }
 
-function deletewww(url) {
-		if (url.startsWith('www.'))
-			{return url.substring(4)}
-		return url
-}
-
-
 // Set up a listener for when the new tab is opened
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
@@ -35,12 +20,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     	// Check if pendingUrl is undefined - when it is NOT new tab
 	if (typeof changeInfo.url !== 'undefined')
 		{
-		//var url = new URL(changeInfo.url);
-		//var hostname = url.hostname;
 		var hostname = extractHostname(changeInfo.url);
-		//console.log(`tab: ${tab} changeInfo.url: ${changeInfo.url} hostname ${hostname}` )
-		//console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
-		console.log("tab changed hostname extractHostname: ",hostname, "call handleHostname..")
+		console.log(`tab: ${tab} changeInfo.url: ${changeInfo.url} hostname ${hostname}` )
+		// DEBUG console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
+		// DEBUG console.log("tab changed hostname extractHostname: ",hostname, "call handleHostname..")
 		handleHostname(hostname, tabId)
 		}
 	else
@@ -75,7 +58,19 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 });
 
 
-// Handle the hostname
+// Get array of hostnames with limits and return string with limitations
+function limits_to_string(hosts){
+	res = ""
+	for (host of hosts){
+		time_limitation = (timeLimits[host] ? timeLimits[host] : "No limit");
+		visits_limitation = (visitLimits[host] ? visitLimits[host] : "No limit");
+		res += `\n${host} Limited to:\n\tTime per limits: ${time_limitation} \n\tVisits per day: ${visits_limitation}\n`
+		}
+	return res;		
+}
+
+
+// Handle the hostname apply limitations and count the visit
 function handleHostname(hostname, tabID){
     // Check if there is a visit count set for this website
     if (visitCounts[hostname]) {
@@ -84,7 +79,7 @@ function handleHostname(hostname, tabID){
       // Check if the visit count has reached the limit
       if (visitCounts[hostname] > visitLimits[hostname])  {
         // If the visit count has reached the limit, navigate the tab to a new URL
-        chrome.tabs.update(tabID, {url: "https://www.rica.nsw.edu.au/resources/do-you-control-your-social-media/"});
+        chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#visits-per-day-exceeded"});
       }
     } else {
       // If there is no visit count set for this website, set the count to 1
@@ -96,7 +91,7 @@ function handleHostname(hostname, tabID){
       const timeLimit = timeLimits[hostname];
       setTimeout(() => {
         // When the timer finishes, navigate the tab to a new URL
-        chrome.tabs.update(tabID, {url: "https://www.rica.nsw.edu.au/resources/do-you-control-your-social-media/"});
+        chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#time-exceeded"});
       }, timeLimit * 1000);
      }
 }    
@@ -110,8 +105,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		var visitLimit = request.visitLimit;
 		// Set the visit limit for the specified website
 		visitLimits[hostname] = visitLimit
-		console.log(hostname, "Limited: ", visitLimit, "visits")
-		//console.log(new URL(request.hostname).hostname)
+		// DEBUG console.log(hostname, "Limited: ", visitLimit, "visits")
+		// DEBUG console.log(new URL(request.hostname).hostname)
 	}
  	// Check if the message is a request to set a time limit
 	if (request.type === "setTimeLimit") {
@@ -119,19 +114,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		var timeLimit = request.timeLimit;
 		// Set the time limit for the specified website
 		timeLimits[hostname] = timeLimit;
-		console.log(hostname, "Limited: ", timeLimit, "seconds")
+		// DEBUG console.log(hostname, "Limited: ", timeLimit, "seconds")
    }
- 	//console.log("from background", visitCounts, timeLimits, visitLimits)	//DEBUG
+ 	// DEBUG console.log("from background", visitCounts, timeLimits, visitLimits)	//DEBUG
  	// Check if the message is a request to delete hostname limits
 	if (request.type === "deLimit") {
-		console.log(" from background deLimit clicked");
+		// DEBUG console.log(" from background deLimit clicked");
 		let hostname = extractHostname(request.hostname);
 		// Set the visit limit for the specified website
 		delete visitLimits[hostname];
 		delete timeLimits[hostname];
-		console.log("visitLimits:", visitLimits)
-		console.log("timeLimits: ", timeLimits)
-
+		// DEBUG console.log("visitLimits:", visitLimits)
+		// DEBUG console.log("timeLimits: ", timeLimits)
    }
 	// Check if the message is a request to show limits   
 	if (request.type === "showLimits") {
@@ -139,8 +133,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		var timeLimitsSet  = new Set(Object.keys(timeLimits));
 		var visitLimitsSet  = new Set(Object.keys(visitLimits)); 
 		var allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
-		console.log(`Limits:\n ${Array.from(allLimitsUnion)}`)
-		sendResponse({farewell: "goodbye from background"});
+		// DEBUG console.log(`Limits:\n ${Array.from(allLimitsUnion)}`)
+		var limitation_respond  = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion)) : "No Limits Yet");
+		sendResponse({limits: limitation_respond});
    }
 });
 
