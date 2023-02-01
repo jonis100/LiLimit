@@ -1,3 +1,21 @@
+// Send a message to the background script to set the time limits
+function limitTime(hostname, timeLimit){
+	chrome.runtime.sendMessage({
+	type: "setTimeLimit",
+	hostname: hostname,
+	timeLimit: timeLimit
+  })
+  };
+
+// Send a message to the background script to set the visit limits
+function limitVisit(hostname, visitLimit){
+	chrome.runtime.sendMessage({
+	type: "setVisitLimit",
+	hostname: hostname,
+	visitLimit: visitLimit
+  })
+  };
+  
 // Set up a listener for when the form is submitted
 const form = document.querySelector("form");
 form.addEventListener("submit", (event) => {
@@ -7,29 +25,23 @@ form.addEventListener("submit", (event) => {
   const timeLimit = document.getElementById("timeLimit").value;
   const visitLimit = document.getElementById("visitLimit").value;
   	//hostnames.push(hostname)
-  	if (timeLimit && visitLimit)
-  	{
-  	alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n ${visitLimit} visits`)
+  	if (timeLimit && visitLimit){
+  		alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n ${visitLimit} visits`)
+  		limitTime(hostname, timeLimit)
+  		limitVisit(hostname, visitLimit)
   	}
-  	else if(timeLimit)
-  	{
-  	alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n no limit visits`)
+  	else if(timeLimit){
+  		alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n No limit visits`)
+  		limitTime(hostname, timeLimit)
   	}
-  	else 
-  	{
-  	alert(`This submmit will limit the hostname ${hostname}:\n no limit time \n ${visitLimit} visits`)
+  	else if (visitLimit){
+  		alert(`This submmit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`)
+  		limitVisit(hostname, visitLimit)
   	}
-  // Send a message to the background script to set the time and visit limits
-  chrome.runtime.sendMessage({
-    type: "setTimeLimit",
-    hostname: hostname,
-    timeLimit: timeLimit
-  });
-  chrome.runtime.sendMessage({
-    type: "setVisitLimit",
-    hostname: hostname,
-    visitLimit: visitLimit
-  });
+  	else{
+  		alert(`No limits applied on ${hostname}`)
+  	}
+  	
 });
 
 

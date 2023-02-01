@@ -2,6 +2,7 @@
 const visitCounts = {};
 const timeLimits = {};
 const visitLimits = {}; 
+const timers = {};
 
 
 // Extaract the hostname from URL
@@ -18,12 +19,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   // The `changeInfo` object contains information about the changes to the tab.
     	// Check if pendingUrl is undefined - when it is NOT new tab
-	if (typeof changeInfo.url !== 'undefined')
-		{
+	if (typeof changeInfo.url !== 'undefined'){
 		var hostname = extractHostname(changeInfo.url);
 		console.log(`tab: ${tab} changeInfo.url: ${changeInfo.url} hostname ${hostname}` )
 		// DEBUG console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 		// DEBUG console.log("tab changed hostname extractHostname: ",hostname, "call handleHostname..")
+		// Delete timer on this tab if exist
+		if (timers[tabId]){
+			clearTimeout(timers[tabId])
+			delete timers[tabId];
+			console.log(`clear timout on tabId: ${tabId}`);
+			}
 		handleHostname(hostname, tabId)
 		}
 	else
@@ -41,7 +47,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 		if (typeof tab.pendingUrl == 'undefined'){
 			//console.log("tab.url.pendingUrl == 'undefined'")
 			//console.log("tab: ",tab)
-			//var url = new URL(tab.url);
 			var hostname = extractHostname(tab.url);
 			//console.log("tab: ", tab, "tab.url:", tab.url, "hostname: ",hostname);
 			console.log("tab switched hostname extractHostname: ",hostname, "call handleHostname..")
@@ -89,10 +94,12 @@ function handleHostname(hostname, tabID){
     if (timeLimits[hostname]) {
       // If there is a time limit set, start a timer for the specified time
       const timeLimit = timeLimits[hostname];
-      setTimeout(() => {
-        // When the timer finishes, navigate the tab to a new URL
+      // When the timer finishes, navigate the tab to a new URL
+      const timer = setTimeout(() => {
         chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#time-exceeded"});
       }, timeLimit * 1000);
+      timers[tabID] = timer;
+      console.log(`timers[tabID]: set on tabId: ${tabID} timer: ${timer}`);
      }
 }    
     
