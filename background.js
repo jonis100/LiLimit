@@ -147,9 +147,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 
-// Reset the visit counts every day at midnight
-setInterval(() => {
-  visitCounts = {};
-}, 86400000);
+// This function will run the func daily at hour:minutes
+function runAtSpecificTimeOfDay(hour, minutes, func)
+{
+  const twentyFourHours = 86400000;
+  const now = new Date();
+  let eta_ms = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minutes, 0, 0).getTime() - now;
+  if (eta_ms < 0)
+  {
+    eta_ms += twentyFourHours;
+  }
+  setTimeout(function() {
+    //run once
+    func();
+    // run every 24 hours from now on
+    setInterval(func, twentyFourHours);
+  }, eta_ms);
+}
+
+
+// run everyday at midnight
+runAtSpecificTimeOfDay(13,45,() => { 
+	// Clean visitCounts of the day
+	for (var member in visitCounts) delete visitCounts[member];
+	//Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
+	for (var member in timers) delete timers[member];
+	
+				});
+
+// Reset the visit counts once a day 
+//setInterval(() => {
+//  visitCounts = {};
+//}, 86400000);
 
 

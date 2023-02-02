@@ -48,11 +48,11 @@ When someone exceeded the limits, the tab redirect to here:
 
 # Visits per day exceeded
 
-![alt text](Images/vpd.png)
+![alt text](Images/cbt.png)
 
 # Time exceeded
 
-![alt text](Images/te.gif)
+![alt text](Images/ytio.png)
 
 ## License
 
