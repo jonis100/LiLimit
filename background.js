@@ -167,7 +167,7 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
 
 
 // run everyday at midnight
-runAtSpecificTimeOfDay(13,45,() => { 
+runAtSpecificTimeOfDay(0,0,() => { 
 	// Clean visitCounts of the day
 	for (var member in visitCounts) delete visitCounts[member];
 	//Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
