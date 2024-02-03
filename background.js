@@ -3,6 +3,7 @@ const visitCounts = {};
 const timeLimits = {};
 const visitLimits = {}; 
 const timers = {};
+const lastHandle = {};
 
 
 // Extaract the hostname from URL
@@ -19,22 +20,27 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   // The `changeInfo` object contains information about the changes to the tab.
     	// Check if pendingUrl is undefined - when it is NOT new tab
-	if (typeof changeInfo.url !== 'undefined'){
+	//if (typeof changeInfo.url !== 'undefined'){
+	try {
 		var hostname = extractHostname(changeInfo.url);
-		console.log(`tab: ${tab} changeInfo.url: ${changeInfo.url} hostname ${hostname}` )
-		// DEBUG console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
+		//console.log(`tab: ${tab} changeInfo.url: ${changeInfo.url} hostname ${hostname}` )
+		 console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 		// DEBUG console.log("tab changed hostname extractHostname: ",hostname, "call handleHostname..")
 		// Delete timer on this tab if exist
-		if (timers[tabId]){
+		if (timers[tabId] && lastHandle[tabId] != hostname){ 
 			clearTimeout(timers[tabId])
 			delete timers[tabId];
 			console.log(`clear timout on tabId: ${tabId}`);
 			}
-		handleHostname(hostname, tabId)
-		}
+		handleHostname(hostname, tabId);
+		} catch (error) {console.log("Can't handle in onUpdated:", error);
+		console.log("The problematic URL: ",changeInfo);}
+	/*	}
 	else
 	// It is a new tab. can escape
-	{return;}
+	{console.log("new tab from onUpdated");
+	console.log("changeInfo: ", changeInfo);
+	return;}*/
 
 	});
 
@@ -47,15 +53,19 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 		if (typeof tab.pendingUrl == 'undefined'){
 			//console.log("tab.url.pendingUrl == 'undefined'")
 			//console.log("tab: ",tab)
+			try {
 			var hostname = extractHostname(tab.url);
 			//console.log("tab: ", tab, "tab.url:", tab.url, "hostname: ",hostname);
 			console.log("tab switched hostname extractHostname: ",hostname, "call handleHostname..")
 			handleHostname(hostname, tab.id)
-			}
-		else
+			
+			} catch (error) {console.log("Can't handle in onActivated:", error);}
+		}
+		else{
 		// It is a new tab. can escape
-		//console.log("tab.url.pendingUrl !== 'undefined'")
-		{return;}
+		console.log("new tab from onActivated");
+		console.log("tab.url.pendingUrl !== 'undefined', but url:", tab.url);
+		return;}
 
 		
 
@@ -77,8 +87,9 @@ function limits_to_string(hosts){
 
 // Handle the hostname apply limitations and count the visit
 function handleHostname(hostname, tabID){
+	console.log("Handling: ", hostname);
     // Check if there is a visit count set for this website
-    if (visitCounts[hostname]) {
+    if (visitCounts[hostname] && lastHandle[tabID] != hostname) {
       // If there is a visit count set, increment the count
       visitCounts[hostname]++;
       // Check if the visit count has reached the limit
@@ -87,8 +98,10 @@ function handleHostname(hostname, tabID){
         chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#visits-per-day-exceeded"});
       }
     } else {
-      // If there is no visit count set for this website, set the count to 1
+    	if (visitLimits[hostname] && lastHandle[tabID] != hostname){
+      // If there is no visit count set for this website, but in visit limits  list- set the count to 1
       visitCounts[hostname] = 1;
+      }
     }
     // Check if there is a time limit set for this website
     if (timeLimits[hostname]) {
@@ -101,6 +114,7 @@ function handleHostname(hostname, tabID){
       timers[tabID] = timer;
       console.log(`timers[tabID]: set on tabId: ${tabID} timer: ${timer}`);
      }
+     lastHandle[tabID] = hostname;
 }    
     
 
@@ -131,6 +145,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		// Set the visit limit for the specified website
 		delete visitLimits[hostname];
 		delete timeLimits[hostname];
+		delete visitCounts[hostname];
 		// DEBUG console.log("visitLimits:", visitLimits)
 		// DEBUG console.log("timeLimits: ", timeLimits)
    }
@@ -179,5 +194,6 @@ runAtSpecificTimeOfDay(0,0,() => {
 //setInterval(() => {
 //  visitCounts = {};
 //}, 86400000);
+
 
 
