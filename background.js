@@ -121,8 +121,8 @@ function handleHostname(hostname, tabID){
 // Set up a listener for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if (request.hostname && extractHostname(request.hostname) === "github.com"){
-		console.log("You cant limit github.com. \n " +
-		"\t1. It will cause infinite loop. \n" +
+		console.log("You can't limit github.com. \n " +
+		"\t1. It will cause an infinite loop. \n" +
 		"\t2. There isn't worried you will waste youre time there..");
 		return;
 	};
