@@ -110,7 +110,7 @@ function handleHostname(hostname, tabID){
       // When the timer finishes, navigate the tab to a new URL
       const timer = setTimeout(() => {
         chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#time-exceeded"});
-      }, timeLimit * 1000);
+      }, timeLimit * 60000);
       timers[tabID] = timer;
       console.log(`timers[tabID]: set on tabId: ${tabID} timer: ${timer}`);
      }
@@ -120,6 +120,12 @@ function handleHostname(hostname, tabID){
 
 // Set up a listener for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+	if (request.hostname && extractHostname(request.hostname) === "github.com"){
+		console.log("You cant limit github.com. \n " +
+		"\t1. It will cause infinite loop. \n" +
+		"\t2. There isn't worried you will waste youre time there..");
+		return;
+	};
 	// Check if the message is a request to set a visits count limit
 	if (request.type === "setVisitLimit") {
 		var hostname = extractHostname(request.hostname);
