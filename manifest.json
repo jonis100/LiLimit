@@ -5,9 +5,7 @@
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
 
   "permissions": [
-    "activeTab",
-    "tabs",
-    "storage"
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js"
