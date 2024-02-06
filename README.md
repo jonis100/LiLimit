@@ -2,14 +2,14 @@
 ![Logo](Images/lily.png)
 ## _This Chrome extension will help you control your time_ 
 
-### Using this Chrome extension, you can limit how long you spend on any website and how many times you visit it.
+### With this Chrome extension, you can control the time spent on any website and manage the number of visits per day.
 
 ## Installation and download 
 
 ### Google web store (ongoing)
 
-- Search for LiLimit in [google chrome store](https://chrome.google.com/webstore/category/extensions)
-- Install it
+- Search for LiLimit in [google chrome store](https://chrome.google.com/webstore/category/extensions).
+- Install it.
 
 ### Manualy Dowload
 
@@ -30,17 +30,17 @@
 ## Usage
 
 1. To use LiLimit, press on LiLimit icon on extension bar:
-    - Insert URL of the website for limitation
-    - Insert desire time per each visit
-    - Insert desire visits per day
-    - Click Set Limits
+    - Insert URL of the website for limitation.
+    - Insert desire time per each visit.
+    - Insert desire visits per day.
+    - Click Set Limits.
 2. To update limitations for website reapete on 1. section.
 3. To remove limitation for website:
-    - Insert URL of the website for delete
-    - Click Delete Limits
+    - Insert URL of the website for delete.
+    - Click Delete Limits.
     - ALL limits for this website will be removed.
 4. To show the lists of limited websites:
-    - Click Show Limits
+    - Click Show Limits.
 
 ## Exceeded
 
