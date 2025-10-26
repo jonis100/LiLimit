@@ -1,21 +1,46 @@
 <!-- popup.html -->
 <!DOCTYPE html>
-<html>
-<head>
-  <title>Lilimit - Time Limit Extension</title>
-</head>
-<body>
-  <form>
-    <label for="hostname">Hostname:</label><br>
-    <input type="text" id="hostname" name="hostname"><br>
-    <label for="timeLimit">Time Limit (in minutes):</label><br>
-    <input type="number" id="timeLimit" name="timeLimit"><br>
-    <label for="visitLimit">Visit Limit:</label><br>
-    <input type="number" id="visitLimit" name="visitLimit"><br><br>
-    <button type="submit" id="submitButton">Set Limits</button>
-    <button type="button" id="ShowLimits">Show Limits</button>
-    <button type="button" id="DeleteLimits">Delete Limits</button>
-  </form> 
-  <script src="popup.js"></script>
-</body>
-</html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LiLimit — Time Limit Extension</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <img src="Images/lily.png" alt="LiLimit logo" class="logo">
+        <h1 class="title">LiLimit</h1>
+      </header>
+
+      <form id="limitsForm" class="form" autocomplete="off">
+        <label for="hostname" class="label">Website (URL or hostname)</label>
+        <input type="text" id="hostname" name="hostname" class="input" placeholder="e.g. https://www.example.com or example.com" aria-label="Website URL or hostname">
+
+        <div class="two-col">
+          <div>
+            <label for="timeLimit" class="label">Time limit (minutes)</label>
+            <input type="number" id="timeLimit" name="timeLimit" class="input" min="1" placeholder="Leave empty for no time limit">
+          </div>
+          <div>
+            <label for="visitLimit" class="label">Visit limit (per day)</label>
+            <input type="number" id="visitLimit" name="visitLimit" class="input" min="1" placeholder="Leave empty for no visit limit">
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button type="submit" id="submitButton" class="btn primary">Set limit</button>
+          <button type="button" id="ShowLimits" class="btn">Show limits</button>
+          <button type="button" id="DeleteLimits" class="btn danger">Delete limit</button>
+        </div>
+      </form>
+
+      <section id="message" class="message" aria-live="polite" hidden></section>
+
+      <footer class="footer">Tip: you can enter either a full URL or just the hostname.</footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>
