@@ -6,7 +6,7 @@
 
 ## Installation and download 
 
-### Google web store (ongoing)
+### Google web store
 
 - Search for LiLimit in [google chrome store](https://chrome.google.com/webstore/category/extensions).
 - Install it.
