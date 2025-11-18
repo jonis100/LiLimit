@@ -26,20 +26,20 @@ form.addEventListener("submit", (event) => {
   const visitLimit = document.getElementById("visitLimit").value;
   	//hostnames.push(hostname)
   	if (timeLimit && visitLimit){
-  		alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n ${visitLimit} visits`)
+		showMessage(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n ${visitLimit} visits`)
   		limitTime(hostname, timeLimit)
   		limitVisit(hostname, visitLimit)
   	}
   	else if(timeLimit){
-  		alert(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n No limit visits`)
+		showMessage(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n No limit visits`)
   		limitTime(hostname, timeLimit)
   	}
   	else if (visitLimit){
-  		alert(`This submmit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`)
+		showMessage(`This submmit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`)
   		limitVisit(hostname, visitLimit)
   	}
   	else{
-  		alert(`No limits applied on ${hostname}`)
+		showMessage(`No limits applied on ${hostname}`)
   	}
   	
 });
@@ -50,12 +50,11 @@ const ShowLimitsBtn = document.getElementById("ShowLimits");
 ShowLimitsBtn.addEventListener("click", (event) => {
 	event.preventDefault();
 	// Send a message to the background script to show limits
-	
 	(async () => {
 		let response = await chrome.runtime.sendMessage({
 		type: "showLimits"
   	});
-  	alert(response.limits)
+  	showMessage(response.limits || 'No limits')
   	})();
 });
 
@@ -65,10 +64,30 @@ const DeleteLimitsBtn = document.getElementById("DeleteLimits");
 DeleteLimitsBtn.addEventListener("click", (event) => {
 	event.preventDefault();
 	const hostname = document.getElementById("hostname").value;
-  	alert(`Deleted all the limits on the hostname :\n ${hostname}`)
+		// showMessage(`Deleted all the limits on the hostname :\n ${hostname}`)
+		alert(`Deleted all the limits on the hostname :\n ${hostname}`)
 // Send a message to the background script to delete the time and visit limits
   chrome.runtime.sendMessage({
     type: "deLimit",
     hostname: hostname
   });
 });
+
+// showMessage: non-blocking status inside the popup
+function showMessage(text, duration = 5000, isError = false){
+	const el = document.getElementById('message');
+	if(!el){
+		// fallback to console if message element not present
+		console.log(text);
+		return;
+	}
+	el.hidden = false;
+	el.textContent = text || '';
+	el.style.color = isError ? 'var(--danger)' : '';
+	// clear after duration
+	clearTimeout(showMessage._timer);
+	showMessage._timer = setTimeout(()=>{
+		el.hidden = true;
+		el.textContent = '';
+	}, duration);
+}
