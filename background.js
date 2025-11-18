@@ -163,10 +163,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		// persist
 		saveLimitsToStorage();
    }
- 	// DEBUG console.log("from background", visitCounts, timeLimits, visitLimits)	//DEBUG
  	// Check if the message is a request to delete hostname limits
     if (request.type === "deLimit") {
-		// DEBUG console.log(" from background deLimit clicked");
 		let hostname = extractHostname(request.hostname);
 		// Set the visit limit for the specified website
 		delete visitLimits[hostname];
@@ -174,8 +172,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		delete visitCounts[hostname];
 		// persist changes
 		saveLimitsToStorage();
-		// DEBUG console.log("visitLimits:", visitLimits)
-		// DEBUG console.log("timeLimits: ", timeLimits)
+
    }
 	// Check if the message is a request to show limits   
 	if (request.type === "showLimits") {
@@ -183,7 +180,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		var timeLimitsSet  = new Set(Object.keys(timeLimits));
 		var visitLimitsSet  = new Set(Object.keys(visitLimits)); 
 		var allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
-		// DEBUG console.log(`Limits:\n ${Array.from(allLimitsUnion)}`)
 		var limitation_respond  = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion)) : "No Limits Yet");
 		sendResponse({limits: limitation_respond});
    }
@@ -201,7 +197,7 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
     eta_ms += twentyFourHours;
   }
   setTimeout(function() {
-    //run once
+    // run once
     func();
     // run every 24 hours from now on
     setInterval(func, twentyFourHours);
@@ -213,15 +209,10 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
 runAtSpecificTimeOfDay(0,0,() => { 
 	// Clean visitCounts of the day
 	for (var member in visitCounts) delete visitCounts[member];
-	//Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
+	// Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
 	for (var member in timers) delete timers[member];
 	
 				});
-
-// Reset the visit counts once a day 
-//setInterval(() => {
-//  visitCounts = {};
-//}, 86400000);
 
 
 
