@@ -35,8 +35,6 @@ describe('LiLimit Popup', () => {
     jest.resetModules();
 
     // Load the script
-    // This executes the code in popup.js which attaches event listeners
-    // Use a timestamp to force re-execution if jest.resetModules isn't enough for native ESM
     await import(`../popup.js?t=${Date.now()}`);
   });
 
