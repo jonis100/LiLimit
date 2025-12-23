@@ -36,7 +36,6 @@ npm run test:coverage
 
 Tests are located in the `__tests__` directory:
 
-- `__tests__/background.test.js` - Tests for background.js functionality
 - `__tests__/popup.test.js` - Tests for popup.js functionality
 - `__tests__/utils.test.js` - Tests for utility functions
 
@@ -44,19 +43,16 @@ Tests are located in the `__tests__` directory:
 
 The test suite includes:
 
-### Background Tests
-- **Chrome API mocks**: Verification of listener setup for runtime, tabs, and storage APIs
-- **Message handlers**: Testing chrome.runtime.onMessage listeners
-- **Tab event handlers**: Testing chrome.tabs.onUpdated and onActivated listeners
-- **Storage API**: Testing chrome.storage.local.get and set functionality
-
 ### Popup Tests
-- **limitTime function**: Time limit message sending
-- **limitVisit function**: Visit limit message sending
-- **Form submission**: Various submission scenarios (time only, visit only, both, none)
-- **showMessage function**: UI message display and handling
-- **Button event listeners**: ShowLimits and DeleteLimits button functionality
-- **DOM elements**: Presence and correctness of UI elements (form, inputs, message)
+Integration tests that verify the interaction between `popup.html` and `popup.js` using JSDOM:
+
+- **Form Interaction**: Verifies that submitting the form with different inputs sends the correct messages to the background script.
+  - Time limit only
+  - Visit limit only
+  - Both limits
+  - No limits
+- **Button Interactions**: Verifies click handlers for "Show limits" and "Delete limit" buttons.
+- **UI Logic**: Verifies that status messages are displayed correctly in the DOM.
 
 ### Utils Tests
 - **extractHostname function**: URL parsing and hostname extraction
