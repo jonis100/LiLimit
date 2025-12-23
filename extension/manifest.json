@@ -11,7 +11,7 @@
     "type": "module"
   },
   "action": {
-    "default_icon": "Images/lily.png",
+    "default_icon": "images/lily.png",
     "default_popup": "popup.html"
   }
 }

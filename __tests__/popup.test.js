@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const html = fs.readFileSync(path.resolve(__dirname, '../popup.html'), 'utf8');
+const html = fs.readFileSync(path.resolve(__dirname, '../extension/popup.html'), 'utf8');
 
 describe('LiLimit Popup', () => {
   let mockChrome;
@@ -35,7 +35,7 @@ describe('LiLimit Popup', () => {
     jest.resetModules();
 
     // Load the script
-    await import(`../popup.js?t=${Date.now()}`);
+    await import(`../extension/popup.js?t=${Date.now()}`);
   });
 
   afterEach(() => {

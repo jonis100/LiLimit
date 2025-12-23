@@ -1,9 +1,11 @@
 export default {
   testEnvironment: 'jsdom',
   collectCoverageFrom: [
-    '*.js',
+    'extension/**/*.js',
     '!jest.config.js',
     '!node_modules/**',
+    '!coverage/**',
+    '!__tests__/**',
   ],
   coverageThreshold: {
     global: {
