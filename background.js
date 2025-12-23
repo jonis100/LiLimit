@@ -1,3 +1,5 @@
+import { extractHostname, limits_to_string } from './utils.js';
+
 // In-memory objects. timeLimits and visitLimits are persisted to  
 const visitCounts = {};
 const timeLimits = {};
@@ -26,24 +28,6 @@ function saveLimitsToStorage(){
 		});
 	} catch (e) {
 		console.error('saveLimitsToStorage failed', e);
-	}
-}
-
-
-// Extaract the hostname from URL
-function extractHostname(input){
-	// Accept either a full URL or a plain hostname
-	try {
-		let url = input;
-		// If input doesn't contain a scheme, prepend https:// so URL() parses hostnames
-		if (!/^\w+:\/\//.test(input)) url = 'https://' + input;
-		const parsed = new URL(url);
-		let hostname = parsed.hostname || input;
-		if (hostname.startsWith('www.')) hostname = hostname.substring(4);
-		return hostname;
-	} catch (e) {
-		// Fallback: return the input as-is (best-effort)
-		return input;
 	}
 }
 
@@ -89,19 +73,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   });
 });
 
-
-// Get array of hostnames with limits and return string with limitations
-function limits_to_string(hosts){
-	res = ""
-	for (host of hosts){
-		time_limitation = (timeLimits[host] ? timeLimits[host] : "No limit");
-		visits_limitation = (visitLimits[host] ? visitLimits[host] : "No limit");
-		res += `\n${host} Limited to:\n\tTime per limits: ${time_limitation} \n\tVisits per day: ${visits_limitation}\n`
-		}
-	return res;		
-}
-
-
 // Handle the hostname apply limitations and count the visit
 function handleHostname(hostname, tabID){
 	console.log("Handling: ", hostname);
@@ -133,7 +104,6 @@ function handleHostname(hostname, tabID){
      }
      lastHandle[tabID] = hostname;
 }    
-    
 
 // Set up a listener for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -180,7 +150,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		var timeLimitsSet  = new Set(Object.keys(timeLimits));
 		var visitLimitsSet  = new Set(Object.keys(visitLimits)); 
 		var allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
-		var limitation_respond  = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion)) : "No Limits Yet");
+		var limitation_respond  = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion), timeLimits, visitLimits) : "No Limits Yet");
 		sendResponse({limits: limitation_respond});
    }
 });
@@ -211,7 +181,6 @@ runAtSpecificTimeOfDay(0,0,() => {
 	for (var member in visitCounts) delete visitCounts[member];
 	// Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
 	for (var member in timers) delete timers[member];
-	
 				});
 
 
