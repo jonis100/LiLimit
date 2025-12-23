@@ -1,5 +1,5 @@
 # LiLimit
-![Logo](Images/lily.png)
+![Logo](extension/images/lily.png)
 ## _This Chrome extension will help you control your time_ 
 
 ### With this Chrome extension, you can control the time spent on any website and manage the number of visits per day.
@@ -48,11 +48,11 @@ When someone exceeded the limits, the tab redirect to here:
 
 # Visits per day exceeded
 
-![alt text](Images/cbt.png)
+![alt text](extension/images/cbt.png)
 
 # Time exceeded
 
-![alt text](Images/ytio.png)
+![alt text](extension/images/ytio.png)
 
 ## License
 

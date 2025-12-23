@@ -4,7 +4,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { extractHostname, limits_to_string } from '../utils.js';
+import { extractHostname, limits_to_string } from '../extension/utils.js';
 
 describe('extractHostname function', () => {
 
