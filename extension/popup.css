@@ -1,9 +1,9 @@
-/* popup.css - styles for LiLimit popup */
+
 :root{
   --bg: #0f172a;
   --card: #0b1220;
   --muted: #9aa4b2;
-  --accent: #6ee7b7; /* soft green */
+  --accent: #6ee7b7;
   --danger: #ff7b7b;
   --text: #e6eef6;
   --radius: 10px;
@@ -17,7 +17,7 @@ html,body{
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   background: linear-gradient(180deg,#071022 0%, #071728 100%);
   color:var(--text);
-  width:280px; /* reasonable default for extension popup */
+  width:280px;
 }
 
 .container{
@@ -121,24 +121,20 @@ html,body{
   text-align:center;
 }
 
-/* make popup narrow on small screens */
+
 @media (max-width:360px){
   html,body{width:320px}
 }
 
-/* Make number input spin arrows less prominent on dark background (WebKit browsers) */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button{
   -webkit-appearance: inner-spin-button;
-  opacity: 0; /* hidden by default */
+  opacity: 0;
   filter: brightness(0.6) contrast(0.9);
   transition: opacity .12s ease;
 }
 
-/* show the native WebKit arrows only when the control is focused (i.e. clicked into) */
 input[type="number"]:focus::-webkit-inner-spin-button,
 input[type="number"]:focus::-webkit-outer-spin-button{
-  opacity: 0.35; /* visible on focus (click) */
+  opacity: 0.35;
 }
-
-/* Keep native appearance in other browsers (Firefox will show its own native arrows) */

@@ -1,13 +1,13 @@
 import { extractHostname, limits_to_string } from './utils.js';
 
-// In-memory objects. timeLimits and visitLimits are persisted to  
+
 const visitCounts = {};
 const timeLimits = {};
 const visitLimits = {}; 
 const timers = {};
 const lastHandle = {};
 
-// Load persisted limits from storage on startup
+
 chrome.storage && chrome.storage.local && chrome.storage.local.get(['timeLimits', 'visitLimits'], (result) => {
 	try {
 		if (result && result.timeLimits) Object.assign(timeLimits, result.timeLimits);
@@ -16,7 +16,7 @@ chrome.storage && chrome.storage.local && chrome.storage.local.get(['timeLimits'
 	} catch (e) { console.error('Error loading limits from storage', e); }
 });
 
-// Save current limits to chrome.storage.local
+
 function saveLimitsToStorage(){
 	try {
 		chrome.storage.local.set({ timeLimits: timeLimits, visitLimits: visitLimits }, () => {
@@ -31,7 +31,7 @@ function saveLimitsToStorage(){
 	}
 }
 
-// Set up a listener for when the new tab is opened
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 	try {
@@ -49,9 +49,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 	});
 
 
-// Set up a listener for when the active tab in the browser changes
+
 chrome.tabs.onActivated.addListener((activeInfo) => {
-  // Get the URL of the active tab
+
   chrome.tabs.get(activeInfo.tabId, (tab) => {
   	// check if pendingUrl is undefined - when it is NOT new tab
 		if (typeof tab.pendingUrl == 'undefined'){
@@ -63,9 +63,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 			} catch (error) {console.log("Can't handle in onActivated:", error);}
 		}
 		else{
-		// It is a new tab. can escape
 		console.log("new tab from onActivated");
-		console.log("tab.url.pendingUrl !== 'undefined', but url:", tab.url);
 		return;}
 
 		
@@ -73,29 +71,29 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   });
 });
 
-// Handle the hostname apply limitations and count the visit
+
 function handleHostname(hostname, tabID){
 	console.log("Handling: ", hostname);
-    // Check if there is a visit count set for this website
+
 		if (visitCounts[hostname] && lastHandle[tabID] != hostname) {
-			// If there is a visit count set, increment the count
+
 			visitCounts[hostname]++;
-			// Check if the visit count has reached the limit
+
 			if (visitLimits[hostname] !== undefined && visitCounts[hostname] > visitLimits[hostname])  {
-				// If the visit count has reached the limit, navigate the tab to a new URL
+
 				chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#visits-per-day-exceeded"});
 			}
 		} else {
 			if (visitLimits[hostname] && lastHandle[tabID] != hostname){
-				// If there is no visit count set for this website, but in visit limits list - set the count to 1
+
 				visitCounts[hostname] = 1;
 			}
 		}
-    // Check if there is a time limit set for this website
+
 		if (timeLimits[hostname] !== undefined) {
-      // If there is a time limit set, start a timer for the specified time
+
       const timeLimit = timeLimits[hostname];
-      // When the timer finishes, navigate the tab to a new URL
+
       const timer = setTimeout(() => {
         chrome.tabs.update(tabID, {url: "https://github.com/jonis100/LiLimit#time-exceeded"});
       }, timeLimit * 60000);
@@ -105,7 +103,7 @@ function handleHostname(hostname, tabID){
      lastHandle[tabID] = hostname;
 }    
 
-// Set up a listener for messages from the popup
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if (request.hostname && extractHostname(request.hostname) === "github.com"){
 		console.log("You can't limit github.com. \n " +
@@ -113,38 +111,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		"\t2. There isn't worried you will waste youre time there..");
 		return;
 	};
-	// Check if the message is a request to set a visits count limit
+
 	if (request.type === "setVisitLimit") {
 		var hostname = extractHostname(request.hostname);
 		var visitLimit = request.visitLimit;
-		// coerce to number when possible
+
 		const v = Number(visitLimit);
 		visitLimits[hostname] = Number.isFinite(v) ? v : visitLimit;
-		// persist
+
 		saveLimitsToStorage();
 	}
- 	// Check if the message is a request to set a time limit
+
 	if (request.type === "setTimeLimit") {
 		var hostname = extractHostname(request.hostname);  
 		var timeLimit = request.timeLimit;
-		// coerce to number when possible
+
 		const t = Number(timeLimit);
 		timeLimits[hostname] = Number.isFinite(t) ? t : timeLimit;
-		// persist
+
 		saveLimitsToStorage();
    }
- 	// Check if the message is a request to delete hostname limits
+
     if (request.type === "deLimit") {
 		let hostname = extractHostname(request.hostname);
-		// Set the visit limit for the specified website
+
 		delete visitLimits[hostname];
 		delete timeLimits[hostname];
 		delete visitCounts[hostname];
-		// persist changes
+
 		saveLimitsToStorage();
 
    }
-	// Check if the message is a request to show limits   
+
 	if (request.type === "showLimits") {
 		console.log(" from background ShowLimits clicked");
 		var timeLimitsSet  = new Set(Object.keys(timeLimits));
@@ -156,7 +154,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 
-// This function will run the func daily at hour:minutes
+
 function runAtSpecificTimeOfDay(hour, minutes, func)
 {
   const twentyFourHours = 86400000;
@@ -167,19 +165,19 @@ function runAtSpecificTimeOfDay(hour, minutes, func)
     eta_ms += twentyFourHours;
   }
   setTimeout(function() {
-    // run once
+
     func();
-    // run every 24 hours from now on
+
     setInterval(func, twentyFourHours);
   }, eta_ms);
 }
 
 
-// run everyday at midnight
+
 runAtSpecificTimeOfDay(0,0,() => { 
-	// Clean visitCounts of the day
+
 	for (var member in visitCounts) delete visitCounts[member];
-	// Clean timers of the day. Needed when closed the tab before switched (manualy or by LiLimit). 
+
 	for (var member in timers) delete timers[member];
 				});
 
