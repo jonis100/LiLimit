@@ -62,7 +62,7 @@ describe('LiLimit Popup', () => {
       // Check message update
       const messageEl = document.getElementById('message');
       expect(messageEl.hidden).toBe(false);
-      expect(messageEl.textContent).toContain('30 sec');
+      expect(messageEl.textContent).toContain('30 minutes');
       expect(messageEl.textContent).toContain('No limit visits');
     });
 

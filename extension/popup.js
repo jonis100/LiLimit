@@ -26,12 +26,12 @@ form.addEventListener("submit", (event) => {
   const visitLimit = document.getElementById("visitLimit").value;
 
   	if (timeLimit && visitLimit){
-		showMessage(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n ${visitLimit} visits`)
+showMessage(`This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n ${visitLimit} visits`)
   		limitTime(hostname, timeLimit)
   		limitVisit(hostname, visitLimit)
   	}
   	else if(timeLimit){
-		showMessage(`This submmit will limit the hostname ${hostname}:\n ${timeLimit} sec \n No limit visits`)
+showMessage(`This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n No limit visits`)
   		limitTime(hostname, timeLimit)
   	}
   	else if (visitLimit){
