@@ -7,7 +7,7 @@
  */
 export function extractHostname(input) {
 	try {
-		const url = input.includes('://') ? input : `https://${input}`;
+		const url = /^\w+:\/\//.test(input) ? input : `https://${input}`;
 		const hostname = new URL(url).hostname;
 		return hostname.replace(/^www\./, '');
 	} catch {
