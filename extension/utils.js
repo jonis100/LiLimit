@@ -6,17 +6,11 @@
  * @returns {string} - Extracted hostname without www prefix
  */
 export function extractHostname(input) {
-
 	try {
-		let url = input;
-
-		if (!/^\w+:\/\//.test(input)) url = 'https://' + input;
-		const parsed = new URL(url);
-		let hostname = parsed.hostname || input;
-		if (hostname.startsWith('www.')) hostname = hostname.substring(4);
-		return hostname;
-	} catch (e) {
-
+		const url = input.includes('://') ? input : `https://${input}`;
+		const hostname = new URL(url).hostname;
+		return hostname.replace(/^www\./, '');
+	} catch {
 		return input;
 	}
 }
