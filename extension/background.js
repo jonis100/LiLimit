@@ -16,6 +16,14 @@ async function initializeFromStorage() {
 
 	initializationPromise = new Promise((resolve, reject) => {
 		chrome.storage.local.get(['timeLimits', 'visitLimits', 'visitCounts'], (result) => {
+			if (chrome.runtime.lastError) {
+				console.error('Error loading data from storage:', chrome.runtime.lastError);
+				isInitialized = false;
+				initializationPromise = null;
+				reject(chrome.runtime.lastError);
+				return;
+			}
+
 			try {
 				if (result && result.timeLimits) Object.assign(timeLimits, result.timeLimits);
 				if (result && result.visitLimits) Object.assign(visitLimits, result.visitLimits);
@@ -24,7 +32,8 @@ async function initializeFromStorage() {
 				isInitialized = true;
 				resolve();
 			} catch (e) {
-				console.error('Error loading data from storage', e);
+				console.error('Error parsing data from storage:', e);
+				isInitialized = false;
 				initializationPromise = null;
 				reject(e);
 			}
@@ -57,9 +66,9 @@ function saveLimitsToStorage(){
 
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-	await initializeFromStorage();
-
 	try {
+		await initializeFromStorage();
+
 		const hostname = extractHostname(changeInfo.url);
 		console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 		if (timers[tabId] && lastHandle[tabId] != hostname){
@@ -77,22 +86,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
-	await initializeFromStorage();
+	try {
+		await initializeFromStorage();
 
-	chrome.tabs.get(activeInfo.tabId, (tab) => {
-		if (typeof tab.pendingUrl == 'undefined'){
-			try {
+		chrome.tabs.get(activeInfo.tabId, (tab) => {
+			if (typeof tab.pendingUrl == 'undefined'){
 				const hostname = extractHostname(tab.url);
 				console.log("tab switched hostname extractHostname: ",hostname, "call handleHostname..")
 				handleHostname(hostname, tab.id)
-			} catch (error) {
-				console.log("Can't handle in onActivated:", error);
+			} else {
+				console.log("new tab from onActivated");
 			}
-		} else {
-			console.log("new tab from onActivated");
-			return;
-		}
-	});
+		});
+	} catch (error) {
+		console.log("Can't handle in onActivated:", error);
+	}
 });
 
 
@@ -126,53 +134,55 @@ function handleHostname(hostname, tabID){
 
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-	initializeFromStorage().then(() => {
-		if (request.hostname && extractHostname(request.hostname) === "github.com"){
-			console.log("You can't limit github.com. \n " +
-			"\t1. It will cause an infinite loop. \n" +
-			"\t2. There isn't worried you will waste youre time there..");
-			return;
-		}
-
-		switch (request.type) {
-			case "setVisitLimit": {
-				const hostname = extractHostname(request.hostname);
-				const visitLimit = request.visitLimit;
-				const v = Number(visitLimit);
-				visitLimits[hostname] = Number.isFinite(v) ? v : visitLimit;
-				saveLimitsToStorage();
-				break;
+	initializeFromStorage()
+		.then(() => {
+			if (request.hostname && extractHostname(request.hostname) === "github.com"){
+				console.log("You can't limit github.com. \n " +
+				"\t1. It will cause an infinite loop. \n" +
+				"\t2. There isn't worried you will waste youre time there..");
+				return;
 			}
 
-			case "setTimeLimit": {
-				const hostname = extractHostname(request.hostname);
-				const timeLimit = request.timeLimit;
-				const t = Number(timeLimit);
-				timeLimits[hostname] = Number.isFinite(t) ? t : timeLimit;
-				saveLimitsToStorage();
-				break;
-			}
+			switch (request.type) {
+				case "setVisitLimit": {
+					const hostname = extractHostname(request.hostname);
+					const v = Number(request.visitLimit);
+					visitLimits[hostname] = Number.isFinite(v) ? v : request.visitLimit;
+					saveLimitsToStorage();
+					break;
+				}
 
-			case "deLimit": {
-				const hostname = extractHostname(request.hostname);
-				delete visitLimits[hostname];
-				delete timeLimits[hostname];
-				delete visitCounts[hostname];
-				saveLimitsToStorage();
-				break;
-			}
+				case "setTimeLimit": {
+					const hostname = extractHostname(request.hostname);
+					const t = Number(request.timeLimit);
+					timeLimits[hostname] = Number.isFinite(t) ? t : request.timeLimit;
+					saveLimitsToStorage();
+					break;
+				}
 
-			case "showLimits": {
-				console.log(" from background ShowLimits clicked");
-				const timeLimitsSet = new Set(Object.keys(timeLimits));
-				const visitLimitsSet = new Set(Object.keys(visitLimits));
-				const allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
-				const limitation_respond = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion), timeLimits, visitLimits) : "No Limits Yet");
-				sendResponse({limits: limitation_respond});
-				break;
+				case "deLimit": {
+					const hostname = extractHostname(request.hostname);
+					delete visitLimits[hostname];
+					delete timeLimits[hostname];
+					delete visitCounts[hostname];
+					saveLimitsToStorage();
+					break;
+				}
+
+				case "showLimits": {
+					console.log(" from background ShowLimits clicked");
+					const timeLimitsSet = new Set(Object.keys(timeLimits));
+					const visitLimitsSet = new Set(Object.keys(visitLimits));
+					const allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
+					const limitation_respond = ((allLimitsUnion.size > 0) ? limits_to_string(Array.from(allLimitsUnion), timeLimits, visitLimits) : "No Limits Yet");
+					sendResponse({limits: limitation_respond});
+					break;
+				}
 			}
-		}
-	});
+		})
+		.catch((error) => {
+			console.error("Can't handle message:", error);
+		});
 	return true;
 });
 
@@ -181,30 +191,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 const DAILY_RESET_ALARM = 'dailyResetAlarm';
 
 async function setupDailyResetAlarm() {
-	await initializeFromStorage();
+	try {
+		await initializeFromStorage();
 
-	const now = new Date();
-	const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-	const delayInMinutes = (nextMidnight - now) / (1000 * 60);
+		const now = new Date();
+		const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+		const delayInMinutes = (nextMidnight - now) / (1000 * 60);
 
-	chrome.alarms.create(DAILY_RESET_ALARM, {
-		delayInMinutes: delayInMinutes,
-		periodInMinutes: 24 * 60
-	});
+		chrome.alarms.create(DAILY_RESET_ALARM, {
+			delayInMinutes: delayInMinutes,
+			periodInMinutes: 24 * 60
+		});
 
-	console.log(`Daily reset alarm scheduled for ${nextMidnight.toLocaleString()}`);
+		console.log(`Daily reset alarm scheduled for ${nextMidnight.toLocaleString()}`);
+	} catch (error) {
+		console.error("Can't setup daily reset alarm:", error);
+	}
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
 	if (alarm.name === DAILY_RESET_ALARM) {
-		await initializeFromStorage();
-		console.log('Daily reset triggered at', new Date().toLocaleString());
+		try {
+			await initializeFromStorage();
+			console.log('Daily reset triggered at', new Date().toLocaleString());
 
-		for (const member in visitCounts) delete visitCounts[member];
-		for (const member in timers) delete timers[member];
+			for (const member in visitCounts) delete visitCounts[member];
+			for (const member in timers) delete timers[member];
 
-		saveLimitsToStorage();
-		console.log('Visit counts and timers reset for new day');
+			saveLimitsToStorage();
+			console.log('Visit counts and timers reset for new day');
+		} catch (error) {
+			console.error("Can't process daily reset:", error);
+		}
 	}
 });
 
