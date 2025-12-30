@@ -15,8 +15,6 @@ export default {
       statements: 50,
     },
   },
-  testMatch: [
-    '**/__tests__/**/*.test.js',
-  ],
+  testMatch: ['**/__tests__/**/*.test.js'],
   verbose: true,
 };
