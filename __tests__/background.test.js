@@ -47,21 +47,22 @@ describe('Background Script - Critical Logic', () => {
   });
 
   describe('Storage Persistence', () => {
-    test('should load timeLimits, visitLimits, AND visitCounts from storage', () => {
-      // Critical: must request all three data types
+    test('should load timeLimits, visitLimits, visitCounts, AND timerStartTimes from storage', () => {
+      // Critical: must request all four data types
       expect(mockStorageGet).toHaveBeenCalledWith(
-        ['timeLimits', 'visitLimits', 'visitCounts'],
+        ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
         expect.any(Function)
       );
     });
 
-    test('should persist visitCounts when saving to storage', () => {
+    test('should persist all data when saving to storage', () => {
       // The module calls updateStorage during init
       if (mockStorageSet.mock.calls.length > 0) {
         const lastCall = mockStorageSet.mock.calls[mockStorageSet.mock.calls.length - 1];
         expect(lastCall[0]).toHaveProperty('timeLimits');
         expect(lastCall[0]).toHaveProperty('visitLimits');
         expect(lastCall[0]).toHaveProperty('visitCounts');
+        expect(lastCall[0]).toHaveProperty('timerStartTimes');
       }
     });
   });
@@ -98,12 +99,22 @@ describe('Background Script - Critical Logic', () => {
   });
 
   describe('Error Handling', () => {
-    test('should catch errors in onUpdated listener', async () => {
+    test('should handle missing URL in onUpdated listener', async () => {
+      const listener = global.chrome.tabs.onUpdated.addListener.mock.calls[0][0];
+
+      // onUpdated now returns early if no URL change
+      await listener(1, {}, {}); // No url in changeInfo
+
+      // Should not throw, just return early
+      expect(true).toBe(true); // Test passes if no error thrown
+    });
+
+    test('should catch errors in onUpdated listener with bad URL', async () => {
       const listener = global.chrome.tabs.onUpdated.addListener.mock.calls[0][0];
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      // Simulate error with invalid URL
-      await listener(1, { url: null }, {});
+      // Simulate error with invalid URL that extractHostname can't handle
+      await listener(1, { url: 'invalid://malformed::url' }, {});
 
       // Should log error, not throw
       expect(consoleLogSpy).toHaveBeenCalled();
