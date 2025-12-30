@@ -18,7 +18,7 @@ describe('LiLimit Popup', () => {
   beforeEach(async () => {
     // Reset DOM
     document.documentElement.innerHTML = html.toString();
-    
+
     // Mock Chrome API
     mockChrome = {
       runtime: {
@@ -26,7 +26,7 @@ describe('LiLimit Popup', () => {
       },
     };
     global.chrome = mockChrome;
-    
+
     // Mock window.alert and console.log to avoid noise
     global.alert = jest.fn();
     global.console.log = jest.fn();
@@ -50,15 +50,15 @@ describe('LiLimit Popup', () => {
 
       hostnameInput.value = 'example.com';
       timeLimitInput.value = '30';
-      
+
       form.dispatchEvent(new Event('submit'));
 
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
         type: 'setTimeLimit',
         hostname: 'example.com',
-        timeLimit: '30'
+        timeLimit: '30',
       });
-      
+
       // Check message update
       const messageEl = document.getElementById('message');
       expect(messageEl.hidden).toBe(false);
@@ -73,13 +73,13 @@ describe('LiLimit Popup', () => {
 
       hostnameInput.value = 'example.com';
       visitLimitInput.value = '5';
-      
+
       form.dispatchEvent(new Event('submit'));
 
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
         type: 'setVisitLimit',
         hostname: 'example.com',
-        visitLimit: '5'
+        visitLimit: '5',
       });
 
       const messageEl = document.getElementById('message');
@@ -96,19 +96,19 @@ describe('LiLimit Popup', () => {
       hostnameInput.value = 'facebook.com';
       timeLimitInput.value = '60';
       visitLimitInput.value = '10';
-      
+
       form.dispatchEvent(new Event('submit'));
 
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
         type: 'setTimeLimit',
         hostname: 'facebook.com',
-        timeLimit: '60'
+        timeLimit: '60',
       });
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
         type: 'setVisitLimit',
         hostname: 'facebook.com',
-        visitLimit: '10'
+        visitLimit: '10',
       });
     });
 
@@ -117,7 +117,7 @@ describe('LiLimit Popup', () => {
       const form = document.querySelector('form');
 
       hostnameInput.value = 'test.com';
-      
+
       form.dispatchEvent(new Event('submit'));
 
       expect(mockChrome.runtime.sendMessage).not.toHaveBeenCalled();
@@ -129,19 +129,19 @@ describe('LiLimit Popup', () => {
   describe('Buttons', () => {
     test('ShowLimits button should request limits', async () => {
       const btn = document.getElementById('ShowLimits');
-      
+
       // Mock the response for the async showLimits call
       mockChrome.runtime.sendMessage.mockResolvedValue({ limits: 'Current limits: ...' });
-      
+
       btn.click();
-      
+
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'showLimits'
+        type: 'showLimits',
       });
 
       // Since the click handler is async, we need to wait a tick
       await Promise.resolve();
-      
+
       const messageEl = document.getElementById('message');
       expect(messageEl.textContent).toBe('Current limits: ...');
     });
@@ -149,16 +149,16 @@ describe('LiLimit Popup', () => {
     test('DeleteLimits button should send deLimit message', () => {
       const btn = document.getElementById('DeleteLimits');
       const hostnameInput = document.getElementById('hostname');
-      
+
       hostnameInput.value = 'todelete.com';
-      
+
       btn.click();
-      
+
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
         type: 'deLimit',
-        hostname: 'todelete.com'
+        hostname: 'todelete.com',
       });
-      
+
       expect(global.alert).toHaveBeenCalled();
     });
   });

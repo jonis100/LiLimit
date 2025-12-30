@@ -3,11 +3,7 @@
   "name": "LiLimit",
   "version": "1.2.0",
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
-  "permissions": [
-    "tabs",
-    "alarms",
-    "storage"
-  ],
+  "permissions": ["tabs", "alarms", "storage"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

@@ -1,31 +1,52 @@
 <!-- popup.html -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LiLimit — Time Limit Extension</title>
-    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <div class="container">
       <header class="header">
-        <img src="images/lily.png" alt="LiLimit logo" class="logo">
+        <img src="images/lily.png" alt="LiLimit logo" class="logo" />
         <h1 class="title">LiLimit</h1>
       </header>
 
       <form id="limitsForm" class="form" autocomplete="off">
         <label for="hostname" class="label">Website (URL or hostname)</label>
-        <input type="text" id="hostname" name="hostname" class="input" placeholder="e.g. https://www.example.com or example.com" aria-label="Website URL or hostname">
+        <input
+          type="text"
+          id="hostname"
+          name="hostname"
+          class="input"
+          placeholder="e.g. https://www.example.com or example.com"
+          aria-label="Website URL or hostname"
+        />
 
         <div class="two-col">
           <div>
             <label for="timeLimit" class="label">Time limit (minutes)</label>
-            <input type="number" id="timeLimit" name="timeLimit" class="input" min="1" placeholder="Leave empty for no time limit">
+            <input
+              type="number"
+              id="timeLimit"
+              name="timeLimit"
+              class="input"
+              min="1"
+              placeholder="Leave empty for no time limit"
+            />
           </div>
           <div>
             <label for="visitLimit" class="label">Visit limit (per day)</label>
-            <input type="number" id="visitLimit" name="visitLimit" class="input" min="1" placeholder="Leave empty for no visit limit">
+            <input
+              type="number"
+              id="visitLimit"
+              name="visitLimit"
+              class="input"
+              min="1"
+              placeholder="Leave empty for no visit limit"
+            />
           </div>
         </div>
 
@@ -43,4 +64,4 @@
 
     <script src="popup.js"></script>
   </body>
-  </html>
+</html>

@@ -3,11 +3,9 @@
  * Testing utility functions of the LiLimit Chrome extension
  */
 
-import { jest } from '@jest/globals';
 import { extractHostname, limits_to_string } from '../extension/utils.js';
 
 describe('extractHostname function', () => {
-
   test('should extract hostname from full URL', () => {
     expect(extractHostname('https://www.google.com')).toBe('google.com');
   });
@@ -42,14 +40,13 @@ describe('extractHostname function', () => {
 });
 
 describe('limits_to_string function', () => {
-
   test('should format single host with both limits', () => {
     const hosts = ['example.com'];
     const timeLimits = { 'example.com': 30 };
     const visitLimits = { 'example.com': 5 };
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toContain('example.com');
     expect(result).toContain('Time per limits: 30');
     expect(result).toContain('Visits per day: 5');
@@ -59,9 +56,9 @@ describe('limits_to_string function', () => {
     const hosts = ['github.com'];
     const timeLimits = { 'github.com': 60 };
     const visitLimits = {};
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toContain('github.com');
     expect(result).toContain('Time per limits: 60');
     expect(result).toContain('Visits per day: No limit');
@@ -71,9 +68,9 @@ describe('limits_to_string function', () => {
     const hosts = ['reddit.com'];
     const timeLimits = {};
     const visitLimits = { 'reddit.com': 10 };
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toContain('reddit.com');
     expect(result).toContain('Time per limits: No limit');
     expect(result).toContain('Visits per day: 10');
@@ -83,9 +80,9 @@ describe('limits_to_string function', () => {
     const hosts = ['example.com', 'github.com'];
     const timeLimits = { 'example.com': 30, 'github.com': 60 };
     const visitLimits = { 'example.com': 5, 'github.com': 10 };
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toContain('example.com');
     expect(result).toContain('github.com');
     expect(result).toContain('Time per limits: 30');
@@ -98,9 +95,9 @@ describe('limits_to_string function', () => {
     const hosts = [];
     const timeLimits = {};
     const visitLimits = {};
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toBe('');
   });
 
@@ -108,9 +105,9 @@ describe('limits_to_string function', () => {
     const hosts = ['example.com'];
     const timeLimits = {};
     const visitLimits = {};
-    
+
     const result = limits_to_string(hosts, timeLimits, visitLimits);
-    
+
     expect(result).toContain('example.com');
     expect(result).toContain('Time per limits: No limit');
     expect(result).toContain('Visits per day: No limit');
