@@ -35,7 +35,7 @@ form.addEventListener('submit', (event) => {
     limitTime(hostname, timeLimit);
   } else if (visitLimit) {
     showMessage(
-      `This submmit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`
+      `This submit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`
     );
     limitVisit(hostname, visitLimit);
   } else {

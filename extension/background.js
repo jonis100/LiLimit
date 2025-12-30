@@ -146,9 +146,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     .then(() => {
       if (request.hostname && extractHostname(request.hostname) === 'github.com') {
         console.log(
-          "You can't limit github.com. \n " +
-            '\t1. It will cause an infinite loop. \n' +
-            "\t2. There isn't worried you will waste youre time there.."
+          "You can't limit github.com.\n" +
+            '\t1. It could cause an infinite loop if the redirect page is on github.com.\n' +
+            "\t2. Don't worry, you're not wasting your time there!"
         );
         return;
       }

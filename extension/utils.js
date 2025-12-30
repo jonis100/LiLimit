@@ -23,9 +23,9 @@ export function extractHostname(input) {
 export function limits_to_string(hosts, timeLimits, visitLimits) {
   let res = '';
   for (const host of hosts) {
-    const time_limitation = timeLimits[host] ? timeLimits[host] : 'No limit';
-    const visits_limitation = visitLimits[host] ? visitLimits[host] : 'No limit';
-    res += `\n${host} Limited to:\n\tTime per limits: ${time_limitation} minutes \n\tVisits per day: ${visits_limitation} times\n`;
+    const time_string = timeLimits[host] ? `${timeLimits[host]} minutes` : 'No limit';
+    const visits_string = visitLimits[host] ? `${visitLimits[host]} times` : 'No limit';
+    res += `\n${host} Limited to:\n\tTime limit per visit: ${time_string}\n\tVisits per day: ${visits_string}\n`;
   }
   return res;
 }

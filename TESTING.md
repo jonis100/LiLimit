@@ -149,7 +149,7 @@ describe('Function name', () => {
 
 ## Critical Bugs Prevented
 
-The test suite is specifically designed to catch these service worker lifecycle bugs found in PR #9:
+The test suite is specifically designed to catch these service worker lifecycle bugs:
 
 ### Bug #1: Race Condition on Startup
 

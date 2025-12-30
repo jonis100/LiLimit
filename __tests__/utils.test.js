@@ -48,8 +48,8 @@ describe('limits_to_string function', () => {
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
     expect(result).toContain('example.com');
-    expect(result).toContain('Time per limits: 30');
-    expect(result).toContain('Visits per day: 5');
+    expect(result).toContain('Time limit per visit: 30 minutes');
+    expect(result).toContain('Visits per day: 5 times');
   });
 
   test('should format host with only time limit', () => {
@@ -60,7 +60,7 @@ describe('limits_to_string function', () => {
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
     expect(result).toContain('github.com');
-    expect(result).toContain('Time per limits: 60');
+    expect(result).toContain('Time limit per visit: 60 minutes');
     expect(result).toContain('Visits per day: No limit');
   });
 
@@ -72,8 +72,8 @@ describe('limits_to_string function', () => {
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
     expect(result).toContain('reddit.com');
-    expect(result).toContain('Time per limits: No limit');
-    expect(result).toContain('Visits per day: 10');
+    expect(result).toContain('Time limit per visit: No limit');
+    expect(result).toContain('Visits per day: 10 times');
   });
 
   test('should format multiple hosts', () => {
@@ -85,10 +85,10 @@ describe('limits_to_string function', () => {
 
     expect(result).toContain('example.com');
     expect(result).toContain('github.com');
-    expect(result).toContain('Time per limits: 30');
-    expect(result).toContain('Time per limits: 60');
-    expect(result).toContain('Visits per day: 5');
-    expect(result).toContain('Visits per day: 10');
+    expect(result).toContain('Time limit per visit: 30 minutes');
+    expect(result).toContain('Time limit per visit: 60 minutes');
+    expect(result).toContain('Visits per day: 5 times');
+    expect(result).toContain('Visits per day: 10 times');
   });
 
   test('should handle empty hosts array', () => {
@@ -109,7 +109,7 @@ describe('limits_to_string function', () => {
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
     expect(result).toContain('example.com');
-    expect(result).toContain('Time per limits: No limit');
+    expect(result).toContain('Time limit per visit: No limit');
     expect(result).toContain('Visits per day: No limit');
   });
 });

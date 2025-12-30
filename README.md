@@ -36,7 +36,7 @@
    - Insert desire time per each visit.
    - Insert desire visits per day.
    - Click Set Limits.
-2. To update limitations for website reapete on 1. section.
+2. To update limitations for website repeat on 1. section.
 3. To remove limitation for website:
    - Insert URL of the website for delete.
    - Click Delete Limits.
