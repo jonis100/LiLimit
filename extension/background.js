@@ -128,7 +128,38 @@ async function restoreTimers() {
   updateStorage();
 }
 
+function handleHostname(hostname, tabID) {
+  console.log('Handling: ', hostname);
+
+  if (visitLimits[hostname] && lastHandle[tabID] != hostname) {
+    visitCounts[hostname] = (visitCounts[hostname] || 0) + 1;
+    console.log(
+      `Visit count for ${hostname} is now ${visitCounts[hostname]} (limit: ${visitLimits[hostname]})`
+    );
+    updateStorage();
+
+    if (visitCounts[hostname] > visitLimits[hostname]) {
+      console.log(`Visit limit exceeded for ${hostname} on tabId: ${tabID}`);
+      chrome.tabs.update(tabID, {
+        url: 'https://github.com/jonis100/LiLimit#visits-per-day-exceeded',
+      });
+      return;
+    }
+  }
+
+  if (timeLimits[hostname] !== undefined && lastHandle[tabID] !== hostname) {
+    const timeLimit = timeLimits[hostname];
+    setTimerForTab(tabID, hostname, timeLimit);
+    console.log(`New timer set for ${hostname} on tabId: ${tabID} for ${timeLimit} minutes`);
+  }
+  lastHandle[tabID] = hostname;
+}
+
 initializeFromStorage().then(() => restoreTimers());
+
+function getAllLimitedHostnames() {
+  return new Set([...Object.keys(timeLimits), ...Object.keys(visitLimits)]);
+}
 
 function updateStorage() {
   try {
@@ -201,34 +232,6 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   }
 });
 
-function handleHostname(hostname, tabID) {
-  console.log('Handling: ', hostname);
-
-  if (visitCounts[hostname] && lastHandle[tabID] != hostname) {
-    visitCounts[hostname]++;
-    updateStorage();
-
-    if (visitLimits[hostname] !== undefined && visitCounts[hostname] > visitLimits[hostname]) {
-      chrome.tabs.update(tabID, {
-        url: 'https://github.com/jonis100/LiLimit#visits-per-day-exceeded',
-      });
-      return;
-    }
-  } else {
-    if (visitLimits[hostname] && lastHandle[tabID] != hostname) {
-      visitCounts[hostname] = 1;
-      updateStorage();
-    }
-  }
-
-  if (timeLimits[hostname] !== undefined && lastHandle[tabID] !== hostname) {
-    const timeLimit = timeLimits[hostname];
-    setTimerForTab(tabID, hostname, timeLimit);
-    console.log(`New timer set for ${hostname} on tabId: ${tabID} for ${timeLimit} minutes`);
-  }
-  lastHandle[tabID] = hostname;
-}
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   initializeFromStorage()
     .then(() => {
@@ -264,6 +267,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           delete timeLimits[hostname];
           delete visitCounts[hostname];
           updateStorage();
+          sendResponse({ success: true });
           break;
         }
 
@@ -277,6 +281,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               ? limits_to_string(Array.from(allLimitsUnion), timeLimits, visitLimits)
               : 'No Limits Yet';
           sendResponse({ limits: limitation_respond });
+          break;
+        }
+
+        case 'getStats': {
+          console.log('getStats called');
+          const stats = [];
+          const allLimitsUnion = getAllLimitedHostnames();
+
+          allLimitsUnion.forEach((hostname) => {
+            const stat = {
+              hostname: hostname,
+              timeLimit: timeLimits[hostname],
+              visitLimit: visitLimits[hostname],
+              visitCount: visitCounts[hostname] || 0,
+            };
+            stats.push(stat);
+          });
+
+          sendResponse({ stats });
+          break;
+        }
+
+        case 'getAllLimits': {
+          console.log('getAllLimits called');
+          const limits = [];
+          const allLimitsUnion = getAllLimitedHostnames();
+
+          allLimitsUnion.forEach((hostname) => {
+            const limit = {
+              hostname: hostname,
+              timeLimit: timeLimits[hostname],
+              visitLimit: visitLimits[hostname],
+            };
+            limits.push(limit);
+          });
+
+          sendResponse({ limits });
           break;
         }
       }
