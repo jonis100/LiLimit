@@ -5,6 +5,7 @@
 ![Node Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)
 ![Tests](https://github.com/jonis100/LiLimit/actions/workflows/test.yml/badge.svg)
 
+
 ![Logo](extension/images/lily.png)
 
 ## _This Chrome extension will help you control your time_
