@@ -1,9 +1,6 @@
 # LiLimit
 
-![Chrome Web Store](https://img.shields.io/chrome-web-store/v/opbckjpgnijalnbanlpgaolmegdmajob?label=Chrome%20Web%20Store)
-![Chrome Web Store Downloads](https://img.shields.io/chrome-web-store/users/opbckjpgnijalnbanlpgaolmegdmajob?label=Downloads)
-![Node Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)
-![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+![Chrome Web Store](https://img.shields.io/chrome-web-store/v/opbckjpgnijalnbanlpgaolmegdmajob?label=Chrome%20Web%20Store) ![Chrome Web Store Downloads](https://img.shields.io/chrome-web-store/users/opbckjpgnijalnbanlpgaolmegdmajob?label=Downloads) ![Node Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen) ![Tests](https://github.com/jonis100/LiLimit/actions/workflows/test.yml/badge.svg)
 
 ![Logo](extension/images/lily.png)
 
