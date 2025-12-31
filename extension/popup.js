@@ -177,12 +177,27 @@ async function loadAllLimits() {
   }
 }
 
+const createLimitsManager = () => {
+  let currentLimits = [];
+
+  return {
+    setLimits: (limits) => {
+      currentLimits = limits;
+    },
+    getLimits: () => currentLimits,
+    removeLimitByHostname: (hostname) => {
+      currentLimits = currentLimits.filter((l) => l.hostname !== hostname);
+    },
+  };
+};
+
+const limitsManager = createLimitsManager();
+
 function renderLimits(limits, filterText = '') {
   const limitsContent = document.getElementById('limitsContent');
 
-  // Store limits for search
   if (!filterText) {
-    window.currentLimits = limits;
+    limitsManager.setLimits(limits);
   }
 
   const filtered = limits.filter((limit) =>
@@ -255,9 +270,14 @@ function renderLimits(limits, filterText = '') {
       e.stopPropagation();
       const hostname = btn.getAttribute('data-hostname');
       if (confirm(`Delete all limits for ${hostname}?`)) {
-        await chrome.runtime.sendMessage({ type: 'deLimit', hostname });
-        showMessage(`Limits removed for ${hostname}`);
-        loadAllLimits();
+        const response = await chrome.runtime.sendMessage({ type: 'deLimit', hostname });
+        if (response && response.success) {
+          showMessage(`Limits removed for ${hostname}`);
+          e.target.closest('.limit-card').remove();
+          limitsManager.removeLimitByHostname(hostname);
+        } else {
+          showMessage(`Failed to remove limits for ${hostname}`, 5000, true);
+        }
       }
     });
   });
@@ -267,7 +287,7 @@ function renderLimits(limits, filterText = '') {
 const searchInput = document.getElementById('searchLimits');
 
 searchInput.addEventListener('input', (e) => {
-  renderLimits(window.currentLimits || [], e.target.value);
+  renderLimits(limitsManager.getLimits(), e.target.value);
 });
 
 // Refresh stats button

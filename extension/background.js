@@ -138,7 +138,7 @@ function handleHostname(hostname, tabID) {
     );
     updateStorage();
 
-    if (visitLimits[hostname] !== undefined && visitCounts[hostname] > visitLimits[hostname]) {
+    if (visitCounts[hostname] > visitLimits[hostname]) {
       console.log(`Visit limit exceeded for ${hostname} on tabId: ${tabID}`);
       chrome.tabs.update(tabID, {
         url: 'https://github.com/jonis100/LiLimit#visits-per-day-exceeded',
@@ -156,6 +156,10 @@ function handleHostname(hostname, tabID) {
 }
 
 initializeFromStorage().then(() => restoreTimers());
+
+function getAllLimitedHostnames() {
+  return new Set([...Object.keys(timeLimits), ...Object.keys(visitLimits)]);
+}
 
 function updateStorage() {
   try {
@@ -263,6 +267,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           delete timeLimits[hostname];
           delete visitCounts[hostname];
           updateStorage();
+          sendResponse({ success: true });
           break;
         }
 
@@ -282,9 +287,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getStats': {
           console.log('getStats called');
           const stats = [];
-          const timeLimitsSet = new Set(Object.keys(timeLimits));
-          const visitLimitsSet = new Set(Object.keys(visitLimits));
-          const allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
+          const allLimitsUnion = getAllLimitedHostnames();
 
           allLimitsUnion.forEach((hostname) => {
             const stat = {
@@ -303,9 +306,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'getAllLimits': {
           console.log('getAllLimits called');
           const limits = [];
-          const timeLimitsSet = new Set(Object.keys(timeLimits));
-          const visitLimitsSet = new Set(Object.keys(visitLimits));
-          const allLimitsUnion = new Set([...timeLimitsSet, ...visitLimitsSet]);
+          const allLimitsUnion = getAllLimitedHostnames();
 
           allLimitsUnion.forEach((hostname) => {
             const limit = {

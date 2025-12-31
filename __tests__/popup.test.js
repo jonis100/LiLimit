@@ -409,7 +409,11 @@ describe('LiLimit Popup', () => {
 
       global.confirm = jest.fn(() => true);
 
+      mockChrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
+
       const deleteButton = document.querySelector('.delete-limit-btn');
+      const limitCard = deleteButton.closest('.limit-card');
+
       deleteButton.click();
 
       await Promise.resolve();
@@ -418,6 +422,8 @@ describe('LiLimit Popup', () => {
         type: 'deLimit',
         hostname: 'example.com',
       });
+
+      expect(limitCard.parentNode).toBeNull();
     });
 
     test('should not delete limit when user cancels confirmation', async () => {

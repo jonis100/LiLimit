@@ -50,7 +50,8 @@ body {
   object-fit: cover;
   background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
   padding: 6px;
-  filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%) hue-rotate(95deg) brightness(95%) contrast(90%);
+  filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%) hue-rotate(95deg)
+    brightness(95%) contrast(90%);
 }
 .title {
   font-size: 16px;
@@ -542,7 +543,9 @@ input[type='number']:focus::-webkit-outer-spin-button {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.3);
   transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
+  transition:
+    width 0.6s,
+    height 0.6s;
 }
 
 .btn:active::before {
