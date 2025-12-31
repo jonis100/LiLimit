@@ -1,10 +1,15 @@
 # LiLimit
 
+![Chrome Web Store](https://img.shields.io/chrome-web-store/v/opbckjpgnijalnbanlpgaolmegdmajob?label=Chrome%20Web%20Store)
+![Chrome Web Store Downloads](https://img.shields.io/chrome-web-store/users/opbckjpgnijalnbanlpgaolmegdmajob?label=Downloads)
+![Node Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+
 ![Logo](extension/images/lily.png)
 
 ## _This Chrome extension will help you control your time_
 
-### With this Chrome extension, you can control the time spent on any website and manage the number of visits per day.
+### Control time spent on any website and manage daily visits.
 
 ## Installation and download
 
@@ -21,13 +26,11 @@
 
 ## Features
 
-- Every number of visits limitation is per 1 day. Once a day visits counter is set to empty.
-- Time limitation per visit, the time is considered from and while the the tab is opened, even is not currently active!
-- Add websit to list with time limitation per visit and number of visits per day (both).
-- Add websit to list with time limitation per visit only.
-- Add websit to list with number of visits per day limitation.
-- Delete all limits per website.
-- Show the lists of websites and limitation.
+- **Daily Visit Limits**: Set maximum visits per day (resets daily at midnight)
+- **Time Limits**: Limit time per visit (tracked while tab is open, even if inactive)
+- **Flexible Configuration**: Set time limits only, visit limits only, or both
+- **Manage Limits**: Add, update, or delete limits for any website
+- **View Dashboard**: See all configured limits at a glance
 
 ## Usage
 
