@@ -1,3 +1,5 @@
+import { extractHostname } from './utils.js';
+
 function initTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -41,7 +43,7 @@ const form = document.querySelector('form');
 form.addEventListener('submit', (event) => {
   event.preventDefault();
 
-  const hostname = document.getElementById('hostname').value;
+  const hostname = extractHostname(document.getElementById('hostname').value);
   const timeLimit = document.getElementById('timeLimit').value;
   const visitLimit = document.getElementById('visitLimit').value;
 
@@ -297,7 +299,7 @@ document.getElementById('refreshStats').addEventListener('click', () => {
 const DeleteLimitsBtn = document.getElementById('DeleteLimits');
 DeleteLimitsBtn.addEventListener('click', (event) => {
   event.preventDefault();
-  const hostname = document.getElementById('hostname').value;
+  const hostname = extractHostname(document.getElementById('hostname').value);
 
   alert(`Deleted all the limits on the hostname :\n ${hostname}`);
 
