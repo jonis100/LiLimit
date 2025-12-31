@@ -66,7 +66,6 @@ form.addEventListener('submit', (event) => {
   }
 });
 
-// Load live stats
 async function loadStats() {
   const statsContent = document.getElementById('statsContent');
   statsContent.innerHTML = '<div class="loading">Loading stats...</div>';
@@ -149,7 +148,6 @@ async function loadStats() {
   }
 }
 
-// Load all limits with enhanced card view
 async function loadAllLimits() {
   const limitsContent = document.getElementById('limitsContent');
   limitsContent.innerHTML = '<div class="loading">Loading limits...</div>';
@@ -264,7 +262,6 @@ function renderLimits(limits, filterText = '') {
 
   limitsContent.innerHTML = limitsHTML;
 
-  // Add delete button listeners
   document.querySelectorAll('.delete-limit-btn').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -283,14 +280,12 @@ function renderLimits(limits, filterText = '') {
   });
 }
 
-// Search functionality
 const searchInput = document.getElementById('searchLimits');
 
 searchInput.addEventListener('input', (e) => {
   renderLimits(limitsManager.getLimits(), e.target.value);
 });
 
-// Refresh stats button
 document.getElementById('refreshStats').addEventListener('click', () => {
   const btn = document.getElementById('refreshStats');
   btn.classList.add('spinning');
@@ -329,7 +324,6 @@ function showMessage(text, duration = 5000, isError = false) {
   }, duration);
 }
 
-// Rotating tips
 const tips = [
   'You can leave time or visits empty to apply only one limit',
   'Enter either a full URL or just the hostname',
@@ -348,7 +342,6 @@ function showRandomTip() {
   footer.textContent = `Tip: ${randomTip}`;
 }
 
-// Initialize tabs on page load
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   showRandomTip();

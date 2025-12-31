@@ -16,10 +16,8 @@ describe('LiLimit Popup', () => {
   let mockChrome;
 
   beforeEach(async () => {
-    // Reset DOM
     document.documentElement.innerHTML = html.toString();
 
-    // Mock Chrome API
     mockChrome = {
       runtime: {
         sendMessage: jest.fn(),
@@ -27,18 +25,14 @@ describe('LiLimit Popup', () => {
     };
     global.chrome = mockChrome;
 
-    // Mock window.alert, console.log, and confirm to avoid noise
     global.alert = jest.fn();
     global.console.log = jest.fn();
     global.confirm = jest.fn(() => true);
 
-    // Reset modules to reload popup.js for each test
     jest.resetModules();
 
-    // Load the script
     await import(`../extension/popup.js?t=${Date.now()}`);
 
-    // Manually trigger DOMContentLoaded since it doesn't fire in tests
     document.dispatchEvent(new Event('DOMContentLoaded'));
   });
 
@@ -63,7 +57,6 @@ describe('LiLimit Popup', () => {
         timeLimit: '30',
       });
 
-      // Check message update
       const messageEl = document.getElementById('message');
       expect(messageEl.hidden).toBe(false);
       expect(messageEl.textContent).toContain('30 minutes');
@@ -239,7 +232,7 @@ describe('LiLimit Popup', () => {
           {
             hostname: 'example.com',
             visitLimit: 10,
-            visitCount: 9, // 90% - should be danger
+            visitCount: 9,
           },
         ],
       });
@@ -257,7 +250,6 @@ describe('LiLimit Popup', () => {
 
       statsButton.click();
       await Promise.resolve();
-      await Promise.resolve(); // Extra tick for error handling
 
       const statsContent = document.getElementById('statsContent');
       expect(statsContent.innerHTML).toContain('Failed to load stats');
