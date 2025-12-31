@@ -14,48 +14,103 @@
         <h1 class="title">LiLimit</h1>
       </header>
 
-      <form id="limitsForm" class="form" autocomplete="off">
-        <label for="hostname" class="label">Website (URL or hostname)</label>
-        <input
-          type="text"
-          id="hostname"
-          name="hostname"
-          class="input"
-          placeholder="e.g. https://www.example.com or example.com"
-          aria-label="Website URL or hostname"
-        />
+      <!-- Tab Navigation -->
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="set-limits">Set Limits</button>
+        <button class="tab-btn" data-tab="stats">Live Stats</button>
+        <button class="tab-btn" data-tab="all-limits">All Limits</button>
+      </nav>
 
-        <div class="two-col">
-          <div>
-            <label for="timeLimit" class="label">Time limit (minutes)</label>
-            <input
-              type="number"
-              id="timeLimit"
-              name="timeLimit"
-              class="input"
-              min="1"
-              placeholder="Leave empty for no time limit"
-            />
+      <!-- Set Limits Tab -->
+      <div id="set-limits" class="tab-content active">
+        <form id="limitsForm" class="form" autocomplete="off">
+          <label for="hostname" class="label">Website (URL or hostname)</label>
+          <input
+            type="text"
+            id="hostname"
+            name="hostname"
+            class="input"
+            placeholder="e.g. https://www.example.com or example.com"
+            aria-label="Website URL or hostname"
+          />
+
+          <div class="two-col">
+            <div>
+              <label for="timeLimit" class="label">Time limit (minutes)</label>
+              <input
+                type="number"
+                id="timeLimit"
+                name="timeLimit"
+                class="input"
+                min="1"
+                placeholder="No time limit yet"
+              />
+            </div>
+            <div>
+              <label for="visitLimit" class="label">Visit limit (per day)</label>
+              <input
+                type="number"
+                id="visitLimit"
+                name="visitLimit"
+                class="input"
+                min="1"
+                placeholder="No visit limit yet"
+              />
+            </div>
           </div>
-          <div>
-            <label for="visitLimit" class="label">Visit limit (per day)</label>
-            <input
-              type="number"
-              id="visitLimit"
-              name="visitLimit"
-              class="input"
-              min="1"
-              placeholder="Leave empty for no visit limit"
-            />
+
+          <div class="buttons">
+            <button type="submit" id="submitButton" class="btn primary">Set limit</button>
+            <button type="button" id="DeleteLimits" class="btn danger">Delete limit</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Live Stats Tab -->
+      <div id="stats" class="tab-content">
+        <div class="stats-container">
+          <div class="stats-header">
+            <h3 class="stats-title">Today's Activity</h3>
+            <button id="refreshStats" class="icon-btn" aria-label="Refresh stats">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+            </button>
+          </div>
+          <div id="statsContent" class="stats-content">
+            <div class="empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0v-5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>
+              </svg>
+              <p>No activity yet today</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="buttons">
-          <button type="submit" id="submitButton" class="btn primary">Set limit</button>
-          <button type="button" id="ShowLimits" class="btn">Show limits</button>
-          <button type="button" id="DeleteLimits" class="btn danger">Delete limit</button>
+      <!-- All Limits Tab -->
+      <div id="all-limits" class="tab-content">
+        <div class="limits-container">
+          <div class="limits-header">
+            <input
+              type="text"
+              id="searchLimits"
+              class="search-input"
+              placeholder="Search websites..."
+              aria-label="Search limits"
+            />
+          </div>
+          <div id="limitsContent" class="limits-content">
+            <div class="empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              <p>No limits set yet</p>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
 
       <section id="message" class="message" aria-live="polite" hidden></section>
 
