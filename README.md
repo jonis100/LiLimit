@@ -28,6 +28,11 @@ Install directly from the [Chrome Web Store](https://chromewebstore.google.com/s
 
 ## Usage
 
+## Demo
+
+[Screencast from 2026-01-04 13-48-22.webm](https://github.com/user-attachments/assets/6102ab7f-9b77-42ee-bd88-408bd753dcfe)
+
+
 ### Setting Limits
 1. Click the LiLimit icon in the extension bar
 2. Enter the website URL
