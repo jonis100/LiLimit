@@ -87,12 +87,13 @@ async function loadStats() {
       return;
     }
 
+    const PROGRESS_CIRCLE_CIRCUMFERENCE = 126;
     let statsHTML = '';
     response.stats.forEach((stat) => {
       const visitPercent = stat.visitLimit ? (stat.visitCount / stat.visitLimit) * 100 : 0;
       const visitColor = visitPercent > 80 ? 'danger' : visitPercent > 50 ? 'warning' : 'success';
-      const circumference = 126;
-      const offset = circumference - (visitPercent / 100) * circumference;
+      const offset =
+        PROGRESS_CIRCLE_CIRCUMFERENCE - (visitPercent / 100) * PROGRESS_CIRCLE_CIRCUMFERENCE;
 
       statsHTML += `
         <div class="stat-card">
@@ -347,10 +348,8 @@ function startTipRotation() {
     const footerTip = document.querySelector('.footer-tip');
     if (!footerTip) return;
 
-    // Fade out
     footerTip.classList.add('fade-out');
 
-    // Change text and fade back in
     setTimeout(() => {
       showRandomTip();
       footerTip.classList.remove('fade-out');
@@ -372,6 +371,7 @@ function toggleTheme() {
 
 function initExportStats() {
   const exportBtn = document.getElementById('exportStats');
+  if (!exportBtn) return;
 
   exportBtn.addEventListener('click', async () => {
     try {

@@ -3,7 +3,9 @@
   --card: #0b1220;
   --muted: #9aa4b2;
   --accent: #6ee7b7;
+  --accent-dark: #4dd6a1;
   --danger: #ff7b7b;
+  --warning: #fbbf24;
   --text: #e6eef6;
   --radius: 10px;
   --pad: 12px;
@@ -12,6 +14,7 @@
   --card-bg: rgba(255, 255, 255, 0.03);
   --border: rgba(255, 255, 255, 0.06);
   --hover-bg: rgba(255, 255, 255, 0.06);
+  --form-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
 }
 
 [data-theme='light'] {
@@ -19,12 +22,15 @@
   --card: #ffffff;
   --muted: #64748b;
   --accent: #10b981;
+  --accent-dark: #059669;
   --danger: #ef4444;
+  --warning: #f59e0b;
   --text: #1e293b;
   --gradient-bg: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
   --card-bg: rgba(255, 255, 255, 0.9);
   --border: rgba(0, 0, 0, 0.1);
   --hover-bg: rgba(0, 0, 0, 0.05);
+  --form-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -89,6 +95,7 @@ body {
 }
 
 .theme-toggle {
+  position: relative;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -97,7 +104,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: auto;
 }
 .theme-toggle:hover {
@@ -133,12 +142,9 @@ body {
   background: var(--card-bg);
   border-radius: var(--radius);
   padding: 10px;
-  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+  box-shadow: var(--form-shadow);
   border: 1px solid var(--border);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-[data-theme='light'] .form {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 .label {
   display: block;
@@ -197,7 +203,7 @@ body {
   filter: brightness(1.06);
 }
 .btn.primary {
-  background: linear-gradient(90deg, var(--accent), #4dd6a1);
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
   color: #032018;
 }
 .btn.danger {
@@ -440,7 +446,7 @@ input[type='number']:focus::-webkit-outer-spin-button {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--accent), #4dd6a1);
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -536,15 +542,15 @@ input[type='number']:focus::-webkit-outer-spin-button {
   height: 100%;
   border-radius: 3px;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(90deg, var(--accent), #4dd6a1);
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
 }
 
 .progress-fill.success {
-  background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
 }
 
 .progress-fill.warning {
-  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  background: linear-gradient(90deg, var(--warning), #f59e0b);
 }
 
 .progress-fill.danger {
@@ -588,7 +594,7 @@ input[type='number']:focus::-webkit-outer-spin-button {
 }
 
 .circular-progress.warning .circle-progress {
-  stroke: #fbbf24;
+  stroke: var(--warning);
 }
 
 .circular-progress-label {
