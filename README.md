@@ -34,6 +34,7 @@ Install directly from the [Chrome Web Store](https://chromewebstore.google.com/s
 
 
 ### Setting Limits
+
 1. Click the LiLimit icon in the extension bar
 2. Enter the website URL
 3. Set desired time limit per visit (optional)
@@ -41,6 +42,7 @@ Install directly from the [Chrome Web Store](https://chromewebstore.google.com/s
 5. Click "Set Limits"
 
 ### Managing Limits
+
 - **Update**: Repeat the steps above for an existing website
 - **Delete**: Enter the website URL and click "Delete Limits"
 - **View All**: Click "Show Limits" to see all configured limits
