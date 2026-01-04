@@ -12,6 +12,22 @@
       <header class="header">
         <img src="images/lily.png" alt="LiLimit logo" class="logo" />
         <h1 class="title">LiLimit</h1>
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
       </header>
 
       <!-- Tab Navigation -->
@@ -30,7 +46,7 @@
             id="hostname"
             name="hostname"
             class="input"
-            placeholder="e.g. https://www.example.com or example.com"
+            placeholder="https://www.example.com"
             aria-label="Website URL or hostname"
           />
 
@@ -71,20 +87,29 @@
         <div class="stats-container">
           <div class="stats-header">
             <h3 class="stats-title">Today's Activity</h3>
-            <button id="refreshStats" class="icon-btn" aria-label="Refresh stats">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
-                />
-              </svg>
-            </button>
+            <div class="stats-actions">
+              <button id="exportStats" class="icon-btn" aria-label="Export stats" title="Export stats as JSON">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+              <button id="refreshStats" class="icon-btn" aria-label="Refresh stats">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           <div id="statsContent" class="stats-content">
             <div class="empty-state">
@@ -139,7 +164,9 @@
 
       <section id="message" class="message" aria-live="polite" hidden></section>
 
-      <footer class="footer">Tip: you can enter either a full URL or just the hostname.</footer>
+      <footer class="footer">
+        <div class="footer-tip">Tip: you can enter either a full URL or just the hostname.</div>
+      </footer>
     </div>
 
     <script type="module" src="popup.js"></script>

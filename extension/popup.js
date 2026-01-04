@@ -91,6 +91,8 @@ async function loadStats() {
     response.stats.forEach((stat) => {
       const visitPercent = stat.visitLimit ? (stat.visitCount / stat.visitLimit) * 100 : 0;
       const visitColor = visitPercent > 80 ? 'danger' : visitPercent > 50 ? 'warning' : 'success';
+      const circumference = 126;
+      const offset = circumference - (visitPercent / 100) * circumference;
 
       statsHTML += `
         <div class="stat-card">
@@ -105,20 +107,16 @@ async function loadStats() {
           ${
             stat.visitLimit
               ? `
-          <div class="stat-row">
-            <div class="stat-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              <span>Visits today</span>
+          <div class="circular-progress ${visitColor}">
+            <svg viewBox="0 0 48 48">
+              <circle class="circle-bg" cx="24" cy="24" r="20"></circle>
+              <circle class="circle-progress" cx="24" cy="24" r="20"
+                style="stroke-dashoffset: ${offset}"></circle>
+            </svg>
+            <div class="circular-progress-label">
+              <div>${stat.visitCount}/${stat.visitLimit}</div>
+              <span class="circular-progress-text">visits</span>
             </div>
-            <div class="stat-value">${stat.visitCount} / ${stat.visitLimit}</div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill ${visitColor}" style="width: ${Math.min(visitPercent, 100)}%"></div>
           </div>
           `
               : ''
@@ -337,14 +335,77 @@ const tips = [
 ];
 
 function showRandomTip() {
-  const footer = document.querySelector('.footer');
-  if (!footer) return;
+  const footerTip = document.querySelector('.footer-tip');
+  if (!footerTip) return;
 
   const randomTip = tips[Math.floor(Math.random() * tips.length)];
-  footer.textContent = `Tip: ${randomTip}`;
+  footerTip.textContent = `Tip: ${randomTip}`;
+}
+
+function startTipRotation() {
+  setInterval(() => {
+    const footerTip = document.querySelector('.footer-tip');
+    if (!footerTip) return;
+
+    // Fade out
+    footerTip.classList.add('fade-out');
+
+    // Change text and fade back in
+    setTimeout(() => {
+      showRandomTip();
+      footerTip.classList.remove('fade-out');
+    }, 300);
+  }, 10000);
+}
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+}
+
+function initExportStats() {
+  const exportBtn = document.getElementById('exportStats');
+
+  exportBtn.addEventListener('click', async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'getStats' });
+
+      if (response && response.stats) {
+        const dataStr = JSON.stringify(response.stats, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lilimit-stats-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showMessage('Stats exported successfully!');
+      }
+    } catch (error) {
+      console.error('Error exporting stats:', error);
+      showMessage('Failed to export stats', 5000, true);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initTabs();
+  initExportStats();
   showRandomTip();
+  startTipRotation();
+
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', toggleTheme);
 });
