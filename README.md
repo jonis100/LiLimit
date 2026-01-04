@@ -10,7 +10,7 @@ A Chrome extension to control your time online by limiting time spent and daily 
 
 ### Chrome Web Store
 
-Install directly from the [Chrome Web Store](https://chromewebstore.google.com/search/lilimit).
+Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/detail/lilimit/opbckjpgnijalnbanlpgaolmegdmajob).
 
 ### Manual Installation
 
@@ -28,9 +28,9 @@ Install directly from the [Chrome Web Store](https://chromewebstore.google.com/s
 
 ## Usage
 
-## Demo
+### Demo
 
-[Screencast from 2026-01-04 13-48-22.webm](https://github.com/user-attachments/assets/6102ab7f-9b77-42ee-bd88-408bd753dcfe)
+[Watch a demo of LiLimit in action](https://github.com/user-attachments/assets/6102ab7f-9b77-42ee-bd88-408bd753dcfe)
 
 ### Setting Limits
 
