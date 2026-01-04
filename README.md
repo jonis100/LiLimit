@@ -4,22 +4,19 @@
 
 ![Logo](extension/images/lily.png)
 
-## _This Chrome extension will help you control your time_
+A Chrome extension to control your time online by limiting time spent and daily visits to any website.
 
-### Control time spent on any website and manage daily visits.
+## Installation
 
-## Installation and download
+### Chrome Web Store
 
-### Google web store
+Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/detail/lilimit/opbckjpgnijalnbanlpgaolmegdmajob).
 
-- [Search for LiLimit in google chrome store](https://chromewebstore.google.com/search/lilimit).
-- Install it.
+### Manual Installation
 
-### Manualy Dowload
-
-- Download the source code from [Github](https://github.com/jonis100/LiLimit) and extract it.
-- Go to chrome://extensions/ and check the box for Developer mode in the top right.
-- Go to the chrome://extensions/ page and click the Load unpacked extension button and select the unzipped folder for your extension to install it.
+1. Download and extract the source code from [GitHub](https://github.com/jonis100/LiLimit)
+2. Navigate to `chrome://extensions/` and enable Developer mode
+3. Click "Load unpacked" and select the extracted folder
 
 ## Features
 
@@ -31,30 +28,35 @@
 
 ## Usage
 
-1. To use LiLimit, press on LiLimit icon on extension bar:
-   - Insert URL of the website for limitation.
-   - Insert desire time per each visit.
-   - Insert desire visits per day.
-   - Click Set Limits.
-2. To update limitations for website repeat on 1. section.
-3. To remove limitation for website:
-   - Insert URL of the website for delete.
-   - Click Delete Limits.
-   - ALL limits for this website will be removed.
-4. To show the lists of limited websites:
-   - Click Show Limits.
+### Demo
 
-## Exceeded
+[Watch a demo of LiLimit in action](https://github.com/user-attachments/assets/6102ab7f-9b77-42ee-bd88-408bd753dcfe)
 
-When someone exceeded the limits, the tab redirect to here:
+### Setting Limits
 
-# Visits per day exceeded
+1. Click the LiLimit icon in the extension bar
+2. Enter the website URL
+3. Set desired time limit per visit (optional)
+4. Set desired visits per day (optional)
+5. Click "Set Limits"
 
-![alt text](extension/images/cbt.png)
+### Managing Limits
 
-# Time exceeded
+- **Update**: Repeat the steps above for an existing website
+- **Delete**: Enter the website URL and click "Delete Limits"
+- **View All**: Click "Show Limits" to see all configured limits
 
-![alt text](extension/images/ytio.png)
+## When Limits are Exceeded
+
+When you exceed a limit, the tab redirects to a blocking page:
+
+### Visits per day exceeded
+
+![Visits per day exceeded screen](extension/images/cbt.png)
+
+### Time limit exceeded
+
+![Time limit exceeded screen](extension/images/ytio.png)
 
 ## License
 
