@@ -15,9 +15,7 @@
     }
   }
 
-  // Initialize immediately
   updateCountdown();
 
-  // Update every second
   setInterval(updateCountdown, 1000);
 })();
