@@ -46,20 +46,8 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 - **Delete**: Enter the website URL and click "Delete Limits"
 - **View All**: Click "Show Limits" to see all configured limits
 
-## When Limits are Exceeded
-
-When you exceed a limit, the tab redirects to a blocking page:
-
-### visits-per-day-exceeded
-
-![Visits per day exceeded screen](extension/images/cbt.png)
-
-### time-exceeded
-
-![Time limit exceeded screen](extension/images/ytio.png)
-
 ## License
 
 MIT
 
-**Free Software, Hell Yeah!**
+**Free Software**
