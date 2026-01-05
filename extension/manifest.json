@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LiLimit",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
   "permissions": ["tabs", "alarms", "storage"],
   "background": {
@@ -11,5 +11,11 @@
   "action": {
     "default_icon": "images/lily.png",
     "default_popup": "popup.html"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["time-exceeded.html", "visits-exceeded.html", "images/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

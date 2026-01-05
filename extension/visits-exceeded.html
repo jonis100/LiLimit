@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visit Limit Exceeded - LiLimit</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #071022 0%, #071728 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        text-align: center;
+        color: #e6eef6;
+        max-width: 700px;
+        width: 100%;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 30px;
+      }
+
+      .logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 8px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .logo-text {
+        font-size: 1.8em;
+        font-weight: 600;
+        color: #6ee7b7;
+      }
+
+      .image-container {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 20px;
+        padding: 40px;
+        margin-bottom: 30px;
+        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        transition: all 0.3s ease;
+      }
+
+      .image-container:hover {
+        border-color: rgba(255, 123, 123, 0.3);
+        box-shadow: 0 24px 70px rgba(2, 6, 23, 0.8);
+        transform: translateY(-2px);
+      }
+
+      .image-container img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+        display: block;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        background: linear-gradient(90deg, #ff8787, #ff6b6b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+      }
+
+      p {
+        font-size: 1.2em;
+        line-height: 1.6;
+        margin-bottom: 15px;
+        color: #9aa4b2;
+      }
+
+      .visit-icon {
+        font-size: 5em;
+        margin-bottom: 20px;
+        animation: bounce 1.5s infinite;
+        filter: drop-shadow(0 4px 12px rgba(255, 123, 123, 0.3));
+      }
+
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-15px);
+        }
+      }
+
+      .info-box {
+        background: rgba(255, 123, 123, 0.05);
+        border: 1px solid rgba(255, 123, 123, 0.15);
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .info-box p {
+        font-size: 1em;
+        color: #e6eef6;
+        margin: 0 0 12px 0;
+      }
+
+      .countdown {
+        font-size: 1.4em;
+        font-weight: 700;
+        margin-top: 12px;
+        color: #6ee7b7;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background-color: rgba(110, 231, 183, 0.05);
+        display: inline-block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .container > * {
+        animation: fadeIn 0.6s ease-out forwards;
+      }
+
+      .container > *:nth-child(1) {
+        animation-delay: 0.1s;
+      }
+      .container > *:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .container > *:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      .container > *:nth-child(4) {
+        animation-delay: 0.4s;
+      }
+      .container > *:nth-child(5) {
+        animation-delay: 0.5s;
+      }
+      .container > *:nth-child(6) {
+        animation-delay: 0.6s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo-container">
+        <img src="images/lily.png" alt="LiLimit" class="logo" />
+        <span class="logo-text">LiLimit</span>
+      </div>
+
+      <div class="visit-icon">🚫</div>
+      <h1>Daily Visit Limit Exceeded</h1>
+      <p>You've reached your daily visit limit for this website.</p>
+      <p>Come back tomorrow for a fresh start!</p>
+
+      <div class="image-container">
+        <img src="images/cbt.png" alt="Daily limit reached" />
+      </div>
+
+      <div class="info-box">
+        <p>Your visit counter will reset at midnight.</p>
+        <div class="countdown" id="countdown">--</div>
+      </div>
+    </div>
+
+    <script src="countdown.js"></script>
+  </body>
+</html>

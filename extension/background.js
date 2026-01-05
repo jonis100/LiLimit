@@ -56,7 +56,7 @@ async function initializeFromStorage() {
 function redirectTabToTimeExceeded(tabID) {
   chrome.tabs
     .update(Number(tabID), {
-      url: 'https://github.com/jonis100/LiLimit#time-exceeded',
+      url: chrome.runtime.getURL('time-exceeded.html'),
     })
     .catch(() => {
       console.log(`Tab ${tabID} no longer exists, cleaned up timer data`);
@@ -141,7 +141,7 @@ function handleHostname(hostname, tabID) {
     if (visitCounts[hostname] > visitLimits[hostname]) {
       console.log(`Visit limit exceeded for ${hostname} on tabId: ${tabID}`);
       chrome.tabs.update(tabID, {
-        url: 'https://github.com/jonis100/LiLimit#visits-per-day-exceeded',
+        url: chrome.runtime.getURL('visits-exceeded.html'),
       });
       return;
     }
@@ -235,15 +235,6 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   initializeFromStorage()
     .then(() => {
-      if (request.hostname && extractHostname(request.hostname) === 'github.com') {
-        console.log(
-          "You can't limit github.com.\n" +
-            '\t1. It could cause an infinite loop if the redirect page is on github.com.\n' +
-            "\t2. Don't worry, you're not wasting your time there!"
-        );
-        return;
-      }
-
       switch (request.type) {
         case 'setVisitLimit': {
           const hostname = extractHostname(request.hostname);

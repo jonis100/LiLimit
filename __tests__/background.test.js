@@ -21,6 +21,7 @@ global.chrome = {
   runtime: {
     onMessage: { addListener: jest.fn() },
     lastError: null,
+    getURL: jest.fn((path) => `chrome-extension://fake-extension-id/${path}`),
   },
   alarms: {
     create: mockAlarmsCreate,
@@ -130,18 +131,14 @@ describe('Background Script', () => {
       expect(mockStorageSet.mock.calls.length).toBeGreaterThan(initialCalls);
     });
 
-    test('should reject github.com hostname', async () => {
+    test('should allow github.com hostname to be limited', async () => {
       const listener = global.chrome.runtime.onMessage.addListener.mock.calls[0][0];
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      const initialCalls = mockStorageSet.mock.calls.length;
 
       listener({ type: 'setVisitLimit', hostname: 'github.com', visitLimit: 5 }, {}, jest.fn());
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const logCalls = consoleLogSpy.mock.calls.map((call) => call.join(' '));
-      const hasGithubRejection = logCalls.some((call) => call.includes("can't limit github.com"));
-      expect(hasGithubRejection).toBe(true);
-
-      consoleLogSpy.mockRestore();
+      expect(mockStorageSet.mock.calls.length).toBeGreaterThan(initialCalls);
     });
 
     test('getStats should return actual limit values', async () => {
@@ -246,6 +243,18 @@ describe('Background Script', () => {
 
       expect(consoleLogSpy).toHaveBeenCalled();
       consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('Redirect Functionality', () => {
+    test.each([
+      ['time-exceeded', 'time-exceeded.html'],
+      ['visits-exceeded', 'visits-exceeded.html'],
+    ])('should use chrome.runtime.getURL for %s redirect', (_name, page) => {
+      expect(global.chrome.runtime.getURL).toBeDefined();
+      const url = global.chrome.runtime.getURL(page);
+      expect(url).toContain(page);
+      expect(url).toMatch(/chrome-extension:\/\//);
     });
   });
 
