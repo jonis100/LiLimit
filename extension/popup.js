@@ -407,5 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
   startTipRotation();
 
   const themeToggle = document.getElementById('themeToggle');
-  themeToggle.addEventListener('click', toggleTheme);
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
 });
