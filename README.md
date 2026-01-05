@@ -50,11 +50,11 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 When you exceed a limit, the tab redirects to a blocking page:
 
-### Visits per day exceeded
+### visits-per-day-exceeded
 
 ![Visits per day exceeded screen](extension/images/cbt.png)
 
-### Time limit exceeded
+### time-exceeded
 
 ![Time limit exceeded screen](extension/images/ytio.png)
 
