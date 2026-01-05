@@ -11,5 +11,11 @@
   "action": {
     "default_icon": "images/lily.png",
     "default_popup": "popup.html"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["time-exceeded.html", "visits-exceeded.html", "images/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
