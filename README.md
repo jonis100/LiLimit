@@ -46,7 +46,6 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 - **Delete**: Enter the website URL and click "Delete Limits"
 - **View All**: Click "Show Limits" to see all configured limits
 
-
 ## License
 
 MIT
