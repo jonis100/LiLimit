@@ -247,16 +247,13 @@ describe('Background Script', () => {
   });
 
   describe('Redirect Functionality', () => {
-    test('should use chrome.runtime.getURL for time-exceeded redirect', () => {
+    test.each([
+      ['time-exceeded', 'time-exceeded.html'],
+      ['visits-exceeded', 'visits-exceeded.html'],
+    ])('should use chrome.runtime.getURL for %s redirect', (_name, page) => {
       expect(global.chrome.runtime.getURL).toBeDefined();
-      const url = global.chrome.runtime.getURL('time-exceeded.html');
-      expect(url).toContain('time-exceeded.html');
-      expect(url).toMatch(/chrome-extension:\/\//);
-    });
-
-    test('should use chrome.runtime.getURL for visits-exceeded redirect', () => {
-      const url = global.chrome.runtime.getURL('visits-exceeded.html');
-      expect(url).toContain('visits-exceeded.html');
+      const url = global.chrome.runtime.getURL(page);
+      expect(url).toContain(page);
       expect(url).toMatch(/chrome-extension:\/\//);
     });
   });
