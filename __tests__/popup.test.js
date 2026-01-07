@@ -202,7 +202,7 @@ describe('LiLimit Popup', () => {
       expect(statsContent.innerHTML).toContain('No activity yet today');
     });
 
-    test('should display stats cards with circular progress', async () => {
+    test('should display stats cards with segmented progress bar', async () => {
       const statsButton = document.querySelector('[data-tab="stats"]');
       mockChrome.runtime.sendMessage.mockResolvedValue({
         stats: [
@@ -222,7 +222,9 @@ describe('LiLimit Popup', () => {
       expect(statsContent.innerHTML).toContain('example.com');
       expect(statsContent.innerHTML).toContain('30 min');
       expect(statsContent.innerHTML).toContain('3/5');
-      expect(statsContent.innerHTML).toContain('circular-progress');
+      expect(statsContent.innerHTML).toContain('progress-bar');
+      expect(statsContent.innerHTML).toContain('progress-fill');
+      expect(statsContent.innerHTML).toContain('progress-segment');
     });
 
     test('should apply correct color to progress bar based on percentage', async () => {
@@ -241,7 +243,7 @@ describe('LiLimit Popup', () => {
       await Promise.resolve();
 
       const statsContent = document.getElementById('statsContent');
-      expect(statsContent.innerHTML).toContain('danger');
+      expect(statsContent.innerHTML).toContain('warning');
     });
 
     test('should handle stats load error gracefully', async () => {

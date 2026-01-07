@@ -1,11 +1,4 @@
 (function () {
-  const img = document.querySelector('img[alt="Daily limit reached"]');
-  if (img) {
-    img.addEventListener('error', function () {
-      this.parentElement.innerHTML = `<div style='padding: 80px; color: #ff7b7b; font-size: 5em;'>🌙</div>`;
-    });
-  }
-
   const countdownEl = document.getElementById('countdown');
   if (!countdownEl) {
     return;

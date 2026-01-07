@@ -87,13 +87,19 @@ async function loadStats() {
       return;
     }
 
-    const PROGRESS_CIRCLE_CIRCUMFERENCE = 126;
     let statsHTML = '';
     response.stats.forEach((stat) => {
-      const visitPercent = stat.visitLimit ? (stat.visitCount / stat.visitLimit) * 100 : 0;
-      const visitColor = visitPercent > 80 ? 'danger' : visitPercent > 50 ? 'warning' : 'success';
-      const offset =
-        PROGRESS_CIRCLE_CIRCUMFERENCE - (visitPercent / 100) * PROGRESS_CIRCLE_CIRCUMFERENCE;
+      const safeVisitCount = stat.visitLimit ? Math.min(stat.visitCount, stat.visitLimit) : stat.visitCount;
+      const visitPercent = stat.visitLimit ? (safeVisitCount / stat.visitLimit) * 100 : 0;
+      const visitColor = visitPercent >= 100 ? 'danger' : visitPercent > 66 ? 'warning' : 'success';
+
+      let segmentsHTML = '';
+      if (stat.visitLimit && stat.visitLimit > 1) {
+        for (let i = 1; i < stat.visitLimit; i++) {
+          const position = (i / stat.visitLimit) * 100;
+          segmentsHTML += `<div class="progress-segment" style="left: ${position}%"></div>`;
+        }
+      }
 
       statsHTML += `
         <div class="stat-card">
@@ -108,16 +114,19 @@ async function loadStats() {
           ${
             stat.visitLimit
               ? `
-          <div class="circular-progress ${visitColor}">
-            <svg viewBox="0 0 48 48">
-              <circle class="circle-bg" cx="24" cy="24" r="20"></circle>
-              <circle class="circle-progress" cx="24" cy="24" r="20"
-                style="stroke-dashoffset: ${offset}"></circle>
-            </svg>
-            <div class="circular-progress-label">
-              <div>${stat.visitCount}/${stat.visitLimit}</div>
-              <span class="circular-progress-text">visits</span>
+          <div class="stat-row">
+            <div class="stat-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+              <span>Visits</span>
             </div>
+            <div class="stat-value">${safeVisitCount}/${stat.visitLimit}</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill ${visitColor}" style="width: ${visitPercent}%"></div>
+            ${segmentsHTML}
           </div>
           `
               : ''

@@ -132,7 +132,18 @@
       .info-box p {
         font-size: 1em;
         color: #e6eef6;
-        margin: 0;
+        margin: 0 0 12px 0;
+      }
+
+      .countdown {
+        font-size: 1.4em;
+        font-weight: 700;
+        margin-top: 12px;
+        color: #6ee7b7;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background-color: rgba(110, 231, 183, 0.05);
+        display: inline-block;
       }
 
       @keyframes fadeIn {
@@ -191,9 +202,10 @@
           Remember: This limit was set to help you maintain a healthy balance. Use this time to
           stretch, take a walk, or focus on other important tasks.
         </p>
+        <div class="countdown" id="countdown">--</div>
       </div>
     </div>
 
-    <script src="time-exceeded.js"></script>
+    <script src="countdown.js"></script>
   </body>
 </html>
