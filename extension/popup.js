@@ -87,6 +87,7 @@ async function loadStats() {
       return;
     }
 
+    const MAX_PROGRESS_SEGMENTS = 50;
     let statsHTML = '';
     response.stats.forEach((stat) => {
       const safeVisitCount = stat.visitLimit
@@ -96,7 +97,7 @@ async function loadStats() {
       const visitColor = visitPercent >= 100 ? 'danger' : visitPercent > 66 ? 'warning' : 'success';
 
       let segmentsHTML = '';
-      if (stat.visitLimit && stat.visitLimit > 1) {
+      if (stat.visitLimit && stat.visitLimit > 1 && stat.visitLimit <= MAX_PROGRESS_SEGMENTS) {
         for (let i = 1; i < stat.visitLimit; i++) {
           const position = (i / stat.visitLimit) * 100;
           segmentsHTML += `<div class="progress-segment" style="left: ${position}%"></div>`;
