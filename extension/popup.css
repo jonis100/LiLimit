@@ -775,3 +775,14 @@ input[type='number']:focus::-webkit-outer-spin-button {
 .current-tab-btn svg {
   flex-shrink: 0;
 }
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.form-header > .label {
+  margin-bottom: 0;
+}
