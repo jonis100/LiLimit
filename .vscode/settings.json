@@ -4,6 +4,9 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[html]": {
+    "editor.suggest.insertMode": "replace"
+  },
   "prettier.requireConfig": true,
   "prettier.useEditorConfig": false,
   "prettier.configPath": ".prettierrc"
