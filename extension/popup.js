@@ -89,7 +89,9 @@ async function loadStats() {
 
     let statsHTML = '';
     response.stats.forEach((stat) => {
-      const safeVisitCount = stat.visitLimit ? Math.min(stat.visitCount, stat.visitLimit) : stat.visitCount;
+      const safeVisitCount = stat.visitLimit
+        ? Math.min(stat.visitCount, stat.visitLimit)
+        : stat.visitCount;
       const visitPercent = stat.visitLimit ? (safeVisitCount / stat.visitLimit) * 100 : 0;
       const visitColor = visitPercent >= 100 ? 'danger' : visitPercent > 66 ? 'warning' : 'success';
 
