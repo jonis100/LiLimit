@@ -147,12 +147,43 @@ function handleHostname(hostname, tabID) {
     }
   }
 
-  if (timeLimits[hostname] !== undefined && lastHandle[tabID] !== hostname) {
+  if (timeLimits[hostname] && lastHandle[tabID] !== hostname) {
     const timeLimit = timeLimits[hostname];
     setTimerForTab(tabID, hostname, timeLimit);
     console.log(`New timer set for ${hostname} on tabId: ${tabID} for ${timeLimit} minutes`);
   }
-  lastHandle[tabID] = hostname;
+  if (timeLimits[hostname] || visitLimits[hostname]) {
+    lastHandle[tabID] = hostname;
+    console.log(`Set lastHandle for tabId: ${tabID} to ${hostname}`);
+  } else {
+    console.log(`No limits for ${hostname}, so not set as lastHandle. \n
+       clearing lastHandle for tabId: ${tabID}`);
+    delete lastHandle[tabID];
+  }
+}
+
+async function applyLimitToOpenTabs(hostname) {
+  console.log(`Applying limits to currently open tabs for ${hostname}`);
+
+  try {
+    const tabs = await chrome.tabs.query({});
+
+    for (const tab of tabs) {
+      if (!tab.url) continue;
+
+      try {
+        const tabHostname = extractHostname(tab.url);
+        if (tabHostname === hostname && lastHandle[tab.id] !== hostname) {
+          console.log(`Found open tab for ${hostname}, applying limits to tab ${tab.id}`);
+          handleHostname(hostname, tab.id);
+        }
+      } catch (error) {
+        console.log(`Error processing tab ${tab.id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error querying tabs:', error);
+  }
 }
 
 initializeFromStorage().then(() => restoreTimers());
@@ -234,13 +265,16 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   initializeFromStorage()
-    .then(() => {
+    .then(async () => {
+      let hostnameToApply = null;
+
       switch (request.type) {
         case 'setVisitLimit': {
           const hostname = extractHostname(request.hostname);
           const v = Number(request.visitLimit);
           visitLimits[hostname] = Number.isFinite(v) ? v : request.visitLimit;
           updateStorage();
+          hostnameToApply = hostname;
           break;
         }
 
@@ -249,6 +283,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const t = Number(request.timeLimit);
           timeLimits[hostname] = Number.isFinite(t) ? t : request.timeLimit;
           updateStorage();
+          hostnameToApply = hostname;
           break;
         }
 
@@ -312,6 +347,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           break;
         }
       }
+
+      if (hostnameToApply) {
+        await applyLimitToOpenTabs(hostnameToApply);
+      }
     })
     .catch((error) => {
       console.error("Can't handle message:", error);
@@ -341,7 +380,7 @@ async function setupDailyResetAlarm() {
   }
 }
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === DAILY_RESET_ALARM) {
     try {
       console.log('Daily reset triggered at', new Date().toLocaleString());
@@ -352,9 +391,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         delete timers[tabID];
       }
       for (const member in timerStartTimes) delete timerStartTimes[member];
+      for (const tabID in lastHandle) delete lastHandle[tabID];
 
       updateStorage();
       console.log('Visit counts, timers, and timer data reset for new day');
+
+      const limitedHostnames = getAllLimitedHostnames();
+      for (const hostname of limitedHostnames) {
+        await applyLimitToOpenTabs(hostname);
+      }
+      console.log('Limits re-applied to open tabs for new day');
     } catch (error) {
       console.error("Can't process daily reset:", error);
     }
