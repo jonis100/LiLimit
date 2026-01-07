@@ -108,6 +108,7 @@ body {
     background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: auto;
+  color: var(--text);
 }
 .theme-toggle:hover {
   background: var(--hover-bg);
@@ -120,6 +121,7 @@ body {
 .theme-toggle .moon-icon {
   position: absolute;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: inherit;
 }
 .theme-toggle .sun-icon {
   opacity: 0;
@@ -741,4 +743,35 @@ input[type='number']:focus::-webkit-outer-spin-button {
 
 .footer-tip.fade-out {
   opacity: 0;
+}
+
+.current-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(90deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.12));
+  border: 1px solid rgba(110, 231, 183, 0.3);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.current-tab-btn:hover {
+  background: linear-gradient(90deg, rgba(110, 231, 183, 0.25), rgba(77, 214, 161, 0.2));
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(110, 231, 183, 0.2);
+}
+
+.current-tab-btn:active {
+  transform: scale(0.97);
+}
+
+.current-tab-btn svg {
+  flex-shrink: 0;
 }

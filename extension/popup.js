@@ -320,6 +320,24 @@ DeleteLimitsBtn.addEventListener('click', (event) => {
   });
 });
 
+const useCurrentTabBtn = document.getElementById('useCurrentTab');
+useCurrentTabBtn.addEventListener('click', async (event) => {
+  event.preventDefault();
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url) {
+      const hostname = extractHostname(tab.url);
+      document.getElementById('hostname').value = hostname;
+      showMessage(`Current tab URL loaded: ${hostname}`, 3000);
+    } else {
+      showMessage('Could not get current tab URL', 3000, true);
+    }
+  } catch (error) {
+    console.error('Error getting current tab:', error);
+    showMessage('Failed to get current tab URL', 3000, true);
+  }
+});
+
 function showMessage(text, duration = 5000, isError = false) {
   const el = document.getElementById('message');
   if (!el) {
