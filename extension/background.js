@@ -173,7 +173,7 @@ async function applyLimitToOpenTabs(hostname) {
 
       try {
         const tabHostname = extractHostname(tab.url);
-        if (tabHostname === hostname && lastHandle[tab.id] !== hostname) {
+        if (tabHostname === hostname) {
           console.log(`Found open tab for ${hostname}, applying limits to tab ${tab.id}`);
           handleHostname(hostname, tab.id);
         }
