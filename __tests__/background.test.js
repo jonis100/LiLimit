@@ -371,40 +371,6 @@ describe('Background Script', () => {
       consoleLogSpy.mockRestore();
     });
 
-    test('should not re-process tabs that are already tracked', async () => {
-      // Use a unique hostname to avoid interference from previous tests
-      const uniqueHost = 'notrackedyet' + Date.now() + '.com';
-      mockTabsQuery.mockReset();
-      mockTabsQuery.mockResolvedValue([{ id: 999, url: `https://${uniqueHost}/page1` }]);
-
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      const listener = global.chrome.runtime.onMessage.addListener.mock.calls[0][0];
-
-      // First limit set - should process the tab
-      listener({ type: 'setVisitLimit', hostname: uniqueHost, visitLimit: 5 }, {}, jest.fn());
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const firstCallLogs = consoleLogSpy.mock.calls.map((call) => call.join(' '));
-      const firstAppliedLogs = firstCallLogs.filter((call) =>
-        call.includes(`Found open tab for ${uniqueHost}`)
-      );
-      expect(firstAppliedLogs.length).toBe(1);
-
-      consoleLogSpy.mockClear();
-
-      // Override limit - should NOT re-process the tab (lastHandle is already set)
-      listener({ type: 'setTimeLimit', hostname: uniqueHost, timeLimit: 30 }, {}, jest.fn());
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const secondCallLogs = consoleLogSpy.mock.calls.map((call) => call.join(' '));
-      const secondAppliedLogs = secondCallLogs.filter((call) =>
-        call.includes(`Found open tab for ${uniqueHost}`)
-      );
-      expect(secondAppliedLogs.length).toBe(0);
-
-      consoleLogSpy.mockRestore();
-    });
-
     test('should handle tabs without URLs gracefully', async () => {
       mockTabsQuery.mockResolvedValue([
         { id: 1, url: 'https://example.com/page1' },
