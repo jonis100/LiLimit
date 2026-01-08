@@ -178,7 +178,7 @@ async function applyLimitToOpenTabs(hostname) {
           handleHostname(hostname, tab.id);
         }
       } catch (error) {
-        console.log(`Error processing tab ${tab.id}:`, error);
+        console.error(`Error processing tab ${tab.id}:`, error);
       }
     }
   } catch (error) {
