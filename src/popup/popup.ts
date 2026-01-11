@@ -1,18 +1,29 @@
-import { extractHostname } from './utils.js';
+import { extractHostname } from '../shared/utils.js';
+import type {
+  LimitItem,
+  StatItem,
+  StatsResponse,
+  LimitsResponse,
+  DeLimitResponse,
+} from '../shared/types.js';
 
-function initTabs() {
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
+function initTabs(): void {
+  const tabButtons = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
+  const tabContents = document.querySelectorAll<HTMLElement>('.tab-content');
 
   tabButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const targetTab = button.getAttribute('data-tab');
+      if (!targetTab) return;
 
       tabButtons.forEach((btn) => btn.classList.remove('active'));
       tabContents.forEach((content) => content.classList.remove('active'));
 
       button.classList.add('active');
-      document.getElementById(targetTab).classList.add('active');
+      const targetElement = document.getElementById(targetTab);
+      if (targetElement) {
+        targetElement.classList.add('active');
+      }
 
       if (targetTab === 'stats') {
         loadStats();
@@ -23,7 +34,7 @@ function initTabs() {
   });
 }
 
-function limitTime(hostname, timeLimit) {
+function limitTime(hostname: string, timeLimit: number | string): void {
   chrome.runtime.sendMessage({
     type: 'setTimeLimit',
     hostname: hostname,
@@ -31,7 +42,7 @@ function limitTime(hostname, timeLimit) {
   });
 }
 
-function limitVisit(hostname, visitLimit) {
+function limitVisit(hostname: string, visitLimit: number | string): void {
   chrome.runtime.sendMessage({
     type: 'setVisitLimit',
     hostname: hostname,
@@ -39,41 +50,49 @@ function limitVisit(hostname, visitLimit) {
   });
 }
 
-const form = document.querySelector('form');
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
+const form = document.querySelector<HTMLFormElement>('form');
+if (form) {
+  form.addEventListener('submit', (event: Event) => {
+    event.preventDefault();
 
-  const hostname = extractHostname(document.getElementById('hostname').value);
-  const timeLimit = document.getElementById('timeLimit').value;
-  const visitLimit = document.getElementById('visitLimit').value;
+    const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+    const timeLimitInput = document.getElementById('timeLimit') as HTMLInputElement;
+    const visitLimitInput = document.getElementById('visitLimit') as HTMLInputElement;
 
-  if (timeLimit && visitLimit) {
-    showMessage(
-      `This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n ${visitLimit} visits`
-    );
-    limitTime(hostname, timeLimit);
-    limitVisit(hostname, visitLimit);
-  } else if (timeLimit) {
-    showMessage(
-      `This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n No limit visits`
-    );
-    limitTime(hostname, timeLimit);
-  } else if (visitLimit) {
-    showMessage(
-      `This submit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`
-    );
-    limitVisit(hostname, visitLimit);
-  } else {
-    showMessage(`No limits applied on ${hostname}`);
-  }
-});
+    const hostname = extractHostname(hostnameInput.value);
+    const timeLimit = timeLimitInput.value;
+    const visitLimit = visitLimitInput.value;
 
-async function loadStats() {
+    if (timeLimit && visitLimit) {
+      showMessage(
+        `This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n ${visitLimit} visits`
+      );
+      limitTime(hostname, timeLimit);
+      limitVisit(hostname, visitLimit);
+    } else if (timeLimit) {
+      showMessage(
+        `This submit will limit the hostname ${hostname}:\n ${timeLimit} minutes \n No limit visits`
+      );
+      limitTime(hostname, timeLimit);
+    } else if (visitLimit) {
+      showMessage(
+        `This submit will limit the hostname ${hostname}:\n No limit time \n ${visitLimit} visits`
+      );
+      limitVisit(hostname, visitLimit);
+    } else {
+      showMessage(`No limits applied on ${hostname}`);
+    }
+  });
+}
+
+async function loadStats(): Promise<void> {
   const statsContent = document.getElementById('statsContent');
+  if (!statsContent) return;
+
   statsContent.innerHTML = '<div class="loading">Loading stats...</div>';
 
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'getStats' });
+    const response = (await chrome.runtime.sendMessage({ type: 'getStats' })) as StatsResponse;
 
     if (!response || !response.stats || response.stats.length === 0) {
       statsContent.innerHTML = `
@@ -89,7 +108,7 @@ async function loadStats() {
 
     const MAX_PROGRESS_SEGMENTS = 50;
     let statsHTML = '';
-    response.stats.forEach((stat) => {
+    response.stats.forEach((stat: StatItem) => {
       const safeVisitCount = stat.visitLimit
         ? Math.min(stat.visitCount, stat.visitLimit)
         : stat.visitCount;
@@ -161,12 +180,14 @@ async function loadStats() {
   }
 }
 
-async function loadAllLimits() {
+async function loadAllLimits(): Promise<void> {
   const limitsContent = document.getElementById('limitsContent');
+  if (!limitsContent) return;
+
   limitsContent.innerHTML = '<div class="loading">Loading limits...</div>';
 
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'getAllLimits' });
+    const response = (await chrome.runtime.sendMessage({ type: 'getAllLimits' })) as LimitsResponse;
 
     if (!response || !response.limits || response.limits.length === 0) {
       limitsContent.innerHTML = `
@@ -188,15 +209,21 @@ async function loadAllLimits() {
   }
 }
 
-const createLimitsManager = () => {
-  let currentLimits = [];
+interface LimitsManager {
+  setLimits: (limits: LimitItem[]) => void;
+  getLimits: () => LimitItem[];
+  removeLimitByHostname: (hostname: string) => void;
+}
+
+const createLimitsManager = (): LimitsManager => {
+  let currentLimits: LimitItem[] = [];
 
   return {
-    setLimits: (limits) => {
+    setLimits: (limits: LimitItem[]) => {
       currentLimits = limits;
     },
     getLimits: () => currentLimits,
-    removeLimitByHostname: (hostname) => {
+    removeLimitByHostname: (hostname: string) => {
       currentLimits = currentLimits.filter((l) => l.hostname !== hostname);
     },
   };
@@ -204,8 +231,9 @@ const createLimitsManager = () => {
 
 const limitsManager = createLimitsManager();
 
-function renderLimits(limits, filterText = '') {
+function renderLimits(limits: LimitItem[], filterText: string = ''): void {
   const limitsContent = document.getElementById('limitsContent');
+  if (!limitsContent) return;
 
   if (!filterText) {
     limitsManager.setLimits(limits);
@@ -275,15 +303,24 @@ function renderLimits(limits, filterText = '') {
 
   limitsContent.innerHTML = limitsHTML;
 
-  document.querySelectorAll('.delete-limit-btn').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
+  document.querySelectorAll<HTMLButtonElement>('.delete-limit-btn').forEach((btn) => {
+    btn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
       const hostname = btn.getAttribute('data-hostname');
+      if (!hostname) return;
+
       if (confirm(`Delete all limits for ${hostname}?`)) {
-        const response = await chrome.runtime.sendMessage({ type: 'deLimit', hostname });
+        const response = (await chrome.runtime.sendMessage({
+          type: 'deLimit',
+          hostname,
+        })) as DeLimitResponse;
         if (response && response.success) {
           showMessage(`Limits removed for ${hostname}`);
-          e.target.closest('.limit-card').remove();
+          const target = e.target as HTMLElement;
+          const limitCard = target.closest('.limit-card');
+          if (limitCard) {
+            limitCard.remove();
+          }
           limitsManager.removeLimitByHostname(hostname);
         } else {
           showMessage(`Failed to remove limits for ${hostname}`, 5000, true);
@@ -293,52 +330,67 @@ function renderLimits(limits, filterText = '') {
   });
 }
 
-const searchInput = document.getElementById('searchLimits');
-
-searchInput.addEventListener('input', (e) => {
-  renderLimits(limitsManager.getLimits(), e.target.value);
-});
-
-document.getElementById('refreshStats').addEventListener('click', () => {
-  const btn = document.getElementById('refreshStats');
-  btn.classList.add('spinning');
-  loadStats().finally(() => {
-    setTimeout(() => btn.classList.remove('spinning'), 500);
+const searchInput = document.getElementById('searchLimits') as HTMLInputElement;
+if (searchInput) {
+  searchInput.addEventListener('input', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    renderLimits(limitsManager.getLimits(), target.value);
   });
-});
+}
+
+const refreshStatsBtn = document.getElementById('refreshStats');
+if (refreshStatsBtn) {
+  refreshStatsBtn.addEventListener('click', () => {
+    const btn = refreshStatsBtn;
+    btn.classList.add('spinning');
+    loadStats().finally(() => {
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+    });
+  });
+}
 
 const DeleteLimitsBtn = document.getElementById('DeleteLimits');
-DeleteLimitsBtn.addEventListener('click', (event) => {
-  event.preventDefault();
-  const hostname = extractHostname(document.getElementById('hostname').value);
+if (DeleteLimitsBtn) {
+  DeleteLimitsBtn.addEventListener('click', (event: Event) => {
+    event.preventDefault();
+    const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+    const hostname = extractHostname(hostnameInput.value);
 
-  alert(`Deleted all the limits on the hostname :\n ${hostname}`);
+    alert(`Deleted all the limits on the hostname :\n ${hostname}`);
 
-  chrome.runtime.sendMessage({
-    type: 'deLimit',
-    hostname: hostname,
+    chrome.runtime.sendMessage({
+      type: 'deLimit',
+      hostname: hostname,
+    });
   });
-});
+}
 
 const useCurrentTabBtn = document.getElementById('useCurrentTab');
-useCurrentTabBtn.addEventListener('click', async (event) => {
-  event.preventDefault();
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.url) {
-      const hostname = extractHostname(tab.url);
-      document.getElementById('hostname').value = hostname;
-      showMessage(`Current tab URL loaded: ${hostname}`, 3000);
-    } else {
-      showMessage('Could not get current tab URL', 3000, true);
+if (useCurrentTabBtn) {
+  useCurrentTabBtn.addEventListener('click', async (event: Event) => {
+    event.preventDefault();
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.url) {
+        const hostname = extractHostname(tab.url);
+        const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+        if (hostnameInput) {
+          hostnameInput.value = hostname;
+        }
+        showMessage(`Current tab URL loaded: ${hostname}`, 3000);
+      } else {
+        showMessage('Could not get current tab URL', 3000, true);
+      }
+    } catch (error) {
+      console.error('Error getting current tab:', error);
+      showMessage('Failed to get current tab URL', 3000, true);
     }
-  } catch (error) {
-    console.error('Error getting current tab:', error);
-    showMessage('Failed to get current tab URL', 3000, true);
-  }
-});
+  });
+}
 
-function showMessage(text, duration = 5000, isError = false) {
+let messageTimer: NodeJS.Timeout | undefined;
+
+function showMessage(text: string, duration: number = 5000, isError: boolean = false): void {
   const el = document.getElementById('message');
   if (!el) {
     console.log(text);
@@ -348,14 +400,16 @@ function showMessage(text, duration = 5000, isError = false) {
   el.textContent = text || '';
   el.style.color = isError ? 'var(--danger)' : '';
 
-  clearTimeout(showMessage._timer);
-  showMessage._timer = setTimeout(() => {
+  if (messageTimer) {
+    clearTimeout(messageTimer);
+  }
+  messageTimer = setTimeout(() => {
     el.hidden = true;
     el.textContent = '';
   }, duration);
 }
 
-const tips = [
+const tips: string[] = [
   'You can leave time or visits empty to apply only one limit',
   'Enter either a full URL or just the hostname',
   'Visit limits reset every day at midnight',
@@ -365,17 +419,17 @@ const tips = [
   'Click the refresh icon to update your stats',
 ];
 
-function showRandomTip() {
-  const footerTip = document.querySelector('.footer-tip');
+function showRandomTip(): void {
+  const footerTip = document.querySelector<HTMLElement>('.footer-tip');
   if (!footerTip) return;
 
   const randomTip = tips[Math.floor(Math.random() * tips.length)];
   footerTip.textContent = `Tip: ${randomTip}`;
 }
 
-function startTipRotation() {
+function startTipRotation(): void {
   setInterval(() => {
-    const footerTip = document.querySelector('.footer-tip');
+    const footerTip = document.querySelector<HTMLElement>('.footer-tip');
     if (!footerTip) return;
 
     footerTip.classList.add('fade-out');
@@ -387,25 +441,25 @@ function startTipRotation() {
   }, 10000);
 }
 
-function initTheme() {
+function initTheme(): void {
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
-function toggleTheme() {
+function toggleTheme(): void {
   const currentTheme = document.documentElement.getAttribute('data-theme');
   const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', newTheme);
   localStorage.setItem('theme', newTheme);
 }
 
-function initExportStats() {
+function initExportStats(): void {
   const exportBtn = document.getElementById('exportStats');
   if (!exportBtn) return;
 
   exportBtn.addEventListener('click', async () => {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'getStats' });
+      const response = (await chrome.runtime.sendMessage({ type: 'getStats' })) as StatsResponse;
 
       if (response && response.stats) {
         const dataStr = JSON.stringify(response.stats, null, 2);

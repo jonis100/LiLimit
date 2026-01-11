@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Time Limit Exceeded - LiLimit</title>
+    <title>Visit Limit Exceeded - LiLimit</title>
     <style>
       * {
         margin: 0;
@@ -71,7 +71,7 @@
       }
 
       .image-container:hover {
-        border-color: rgba(110, 231, 183, 0.3);
+        border-color: rgba(255, 123, 123, 0.3);
         box-shadow: 0 24px 70px rgba(2, 6, 23, 0.8);
         transform: translateY(-2px);
       }
@@ -87,7 +87,7 @@
       h1 {
         font-size: 2.5em;
         margin-bottom: 20px;
-        background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+        background: linear-gradient(90deg, #ff8787, #ff6b6b);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -101,28 +101,26 @@
         color: #9aa4b2;
       }
 
-      .time-icon {
+      .visit-icon {
         font-size: 5em;
         margin-bottom: 20px;
-        animation: pulse 2s infinite;
-        filter: drop-shadow(0 4px 12px rgba(110, 231, 183, 0.3));
+        animation: bounce 1.5s infinite;
+        filter: drop-shadow(0 4px 12px rgba(255, 123, 123, 0.3));
       }
 
-      @keyframes pulse {
+      @keyframes bounce {
         0%,
         100% {
-          transform: scale(1);
-          opacity: 0.9;
+          transform: translateY(0);
         }
         50% {
-          transform: scale(1.05);
-          opacity: 1;
+          transform: translateY(-15px);
         }
       }
 
       .info-box {
-        background: rgba(110, 231, 183, 0.05);
-        border: 1px solid rgba(110, 231, 183, 0.15);
+        background: rgba(255, 123, 123, 0.05);
+        border: 1px solid rgba(255, 123, 123, 0.15);
         border-radius: 12px;
         padding: 24px;
         margin-top: 20px;
@@ -138,6 +136,7 @@
       .countdown {
         font-size: 1.4em;
         font-weight: 700;
+        margin-top: 12px;
         color: #6ee7b7;
         padding: 8px 16px;
         border-radius: 8px;
@@ -183,24 +182,21 @@
   <body>
     <div class="container">
       <div class="logo-container">
-        <img src="images/lily.png" alt="LiLimit" class="logo" />
+        <img src="../images/lily.png" alt="LiLimit" class="logo" />
         <span class="logo-text">LiLimit</span>
       </div>
 
-      <div class="time-icon">⏰</div>
-      <h1>Time Limit Exceeded</h1>
-      <p>You've reached your time limit for this website.</p>
-      <p>Take a break and come back later!</p>
+      <div class="visit-icon">🚫</div>
+      <h1>Daily Visit Limit Exceeded</h1>
+      <p>You've reached your daily visit limit for this website.</p>
+      <p>Come back tomorrow for a fresh start!</p>
 
       <div class="image-container">
-        <img src="images/ytio.png" alt="Take a break" />
+        <img src="../images/cbt.png" alt="Daily limit reached" />
       </div>
 
       <div class="info-box">
-        <p>
-          Remember: This limit was set to help you maintain a healthy balance. Use this time to
-          stretch, take a walk, or focus on other important tasks.
-        </p>
+        <p>Your visit counter will reset at midnight.</p>
         <div class="countdown" id="countdown">--</div>
       </div>
     </div>

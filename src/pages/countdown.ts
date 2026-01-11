@@ -1,20 +1,22 @@
-(function () {
+(function (): void {
   const countdownEl = document.getElementById('countdown');
   if (!countdownEl) {
     return;
   }
 
-  const intervalId = setInterval(updateCountdown, 1000);
+  const intervalId: NodeJS.Timeout = setInterval(updateCountdown, 1000);
 
-  function updateCountdown() {
+  function updateCountdown(): void {
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setHours(24, 0, 0, 0);
 
-    const diff = tomorrow - now;
+    const diff = tomorrow.getTime() - now.getTime();
 
     if (diff <= 0) {
-      countdownEl.textContent = 'Limits have been reset!';
+      if (countdownEl) {
+        countdownEl.textContent = 'Limits have been reset!';
+      }
       clearInterval(intervalId);
       return;
     }
@@ -23,9 +25,11 @@
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-    const pad = (num) => String(num).padStart(2, '0');
+    const pad = (num: number): string => String(num).padStart(2, '0');
 
-    countdownEl.textContent = `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+    if (countdownEl) {
+      countdownEl.textContent = `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+    }
   }
 
   updateCountdown();

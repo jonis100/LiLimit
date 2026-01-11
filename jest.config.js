@@ -1,11 +1,26 @@
 export default {
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'jsdom',
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: 'tsconfig.test.json',
+      },
+    ],
+  },
   collectCoverageFrom: [
-    'extension/**/*.js',
+    '*.ts',
     '!jest.config.js',
     '!node_modules/**',
     '!coverage/**',
     '!__tests__/**',
+    '!dist/**',
   ],
   coverageThreshold: {
     global: {
@@ -15,6 +30,6 @@ export default {
       statements: 50,
     },
   },
-  testMatch: ['**/__tests__/**/*.test.js'],
+  testMatch: ['**/__tests__/**/*.test.ts'],
   verbose: true,
 };
