@@ -328,7 +328,7 @@ chrome.runtime.onMessage.addListener(
   (
     request: MessageRequest,
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: any) => void
+    sendResponse: (response?: Record<string, unknown>) => void
   ) => {
     (async () => {
       try {
