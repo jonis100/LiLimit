@@ -1,4 +1,6 @@
-export default {
+import type { Config } from 'jest';
+
+const config: Config = {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'jsdom',
   extensionsToTreatAsEsm: ['.ts'],
@@ -16,7 +18,7 @@ export default {
   },
   collectCoverageFrom: [
     '*.ts',
-    '!jest.config.js',
+    '!jest.config.ts',
     '!node_modules/**',
     '!coverage/**',
     '!__tests__/**',
@@ -33,3 +35,5 @@ export default {
   testMatch: ['**/__tests__/**/*.test.ts'],
   verbose: true,
 };
+
+export default config;

@@ -258,7 +258,7 @@ describe('Background Script', () => {
       const sendResponse = jest.fn();
 
       messageListener(
-        { type: 'setTimeLimit', hostname: 'example.com', timeLimit: '60' as any },
+        { type: 'setTimeLimit', hostname: 'example.com', timeLimit: '60' as unknown as number },
         {},
         sendResponse
       );
@@ -610,7 +610,7 @@ describe('Background Script', () => {
         const callback = args[1] as (() => void) | undefined;
         global.chrome.runtime.lastError = { message: 'Storage quota exceeded' };
         if (callback) callback();
-        global.chrome.runtime.lastError = null as any;
+        (global.chrome.runtime.lastError as unknown) = null;
       });
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
