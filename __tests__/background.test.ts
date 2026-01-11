@@ -610,7 +610,6 @@ describe('Background Script', () => {
         const callback = args[1] as (() => void) | undefined;
         global.chrome.runtime.lastError = { message: 'Storage quota exceeded' };
         if (callback) callback();
-        // Reset to null - already typed as nullable in declaration
         (global.chrome.runtime.lastError as unknown) = null;
       });
 
