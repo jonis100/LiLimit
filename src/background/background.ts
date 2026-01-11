@@ -108,7 +108,7 @@ async function initializeFromStorage(): Promise<void> {
 function redirectTabToTimeExceeded(tabID: string | number): void {
   chrome.tabs
     .update(Number(tabID), {
-      url: chrome.runtime.getURL('../pages/time-exceeded.html'),
+      url: chrome.runtime.getURL('pages/time-exceeded.html'),
     })
     .catch(() => {
       console.log(`Tab ${tabID} no longer exists, cleaned up timer data`);
@@ -203,7 +203,7 @@ function handleHostname(hostname: string, tabID: number): void {
     if (visitCounts[hostname] > visitLimits[hostname]) {
       console.log(`Visit limit exceeded for ${hostname} on tabId: ${tabID}`);
       chrome.tabs.update(tabID, {
-        url: chrome.runtime.getURL('../pages/visits-exceeded.html'),
+        url: chrome.runtime.getURL('pages/visits-exceeded.html'),
       });
       return;
     }
@@ -340,9 +340,11 @@ chrome.runtime.onMessage.addListener(
             if (!request.hostname) break;
             const hostname = extractHostname(request.hostname);
             const v = Number(request.visitLimit);
-            visitLimits[hostname] = Number.isFinite(v) ? v : request.visitLimit!;
-            updateStorage();
-            hostnameToApply = hostname;
+            if (Number.isFinite(v) && v > 0) {
+              visitLimits[hostname] = v;
+              updateStorage();
+              hostnameToApply = hostname;
+            }
             break;
           }
 
@@ -350,9 +352,11 @@ chrome.runtime.onMessage.addListener(
             if (!request.hostname) break;
             const hostname = extractHostname(request.hostname);
             const t = Number(request.timeLimit);
-            timeLimits[hostname] = Number.isFinite(t) ? t : request.timeLimit!;
-            updateStorage();
-            hostnameToApply = hostname;
+            if (Number.isFinite(t) && t > 0) {
+              timeLimits[hostname] = t;
+              updateStorage();
+              hostnameToApply = hostname;
+            }
             break;
           }
 
