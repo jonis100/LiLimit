@@ -1,5 +1,5 @@
 /**
- * Unit tests for popup.js
+ * Unit tests for popup.ts
  * Testing UI and message handling functionality with real DOM
  */
 
@@ -7,31 +7,56 @@ import { jest } from '@jest/globals';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { MessageResponse } from '../src/shared/types.ts';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const html = fs.readFileSync(path.resolve(__dirname, '../extension/popup.html'), 'utf8');
+const html = fs.readFileSync(path.resolve(__dirname, '../public/popup.html'), 'utf8');
+
+interface MockChrome {
+  runtime: {
+    sendMessage: jest.MockedFunction<(message: unknown) => Promise<MessageResponse>>;
+  };
+}
 
 describe('LiLimit Popup', () => {
-  let mockChrome;
+  let mockChrome: MockChrome;
 
   beforeEach(async () => {
     document.documentElement.innerHTML = html.toString();
 
     mockChrome = {
       runtime: {
-        sendMessage: jest.fn(),
+        sendMessage: jest.fn<(message: unknown) => Promise<MessageResponse>>(),
       },
     };
-    global.chrome = mockChrome;
 
-    global.alert = jest.fn();
+    // Override global chrome with our mock
+    Object.defineProperty(global, 'chrome', {
+      value: mockChrome,
+      writable: true,
+      configurable: true,
+    });
+
+    // Override global functions for testing
+    Object.defineProperty(global, 'alert', {
+      value: jest.fn(),
+      writable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(global, 'confirm', {
+      value: jest.fn(() => true),
+      writable: true,
+      configurable: true,
+    });
+
     global.console.log = jest.fn();
-    global.confirm = jest.fn(() => true);
 
     jest.resetModules();
 
-    await import(`../extension/popup.js?t=${Date.now()}`);
+    await import(`../src/popup/popup.ts?t=${Date.now()}`);
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
   });
@@ -42,9 +67,9 @@ describe('LiLimit Popup', () => {
 
   describe('Form Interaction', () => {
     test('should send limitTime message when only timeLimit is provided', () => {
-      const hostnameInput = document.getElementById('hostname');
-      const timeLimitInput = document.getElementById('timeLimit');
-      const form = document.getElementById('limitsForm');
+      const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+      const timeLimitInput = document.getElementById('timeLimit') as HTMLInputElement;
+      const form = document.getElementById('limitsForm') as HTMLFormElement;
 
       hostnameInput.value = 'example.com';
       timeLimitInput.value = '30';
@@ -57,16 +82,16 @@ describe('LiLimit Popup', () => {
         timeLimit: '30',
       });
 
-      const messageEl = document.getElementById('message');
+      const messageEl = document.getElementById('message') as HTMLElement;
       expect(messageEl.hidden).toBe(false);
       expect(messageEl.textContent).toContain('30 minutes');
       expect(messageEl.textContent).toContain('No limit visits');
     });
 
     test('should send limitVisit message when only visitLimit is provided', () => {
-      const hostnameInput = document.getElementById('hostname');
-      const visitLimitInput = document.getElementById('visitLimit');
-      const form = document.getElementById('limitsForm');
+      const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+      const visitLimitInput = document.getElementById('visitLimit') as HTMLInputElement;
+      const form = document.getElementById('limitsForm') as HTMLFormElement;
 
       hostnameInput.value = 'example.com';
       visitLimitInput.value = '5';
@@ -79,16 +104,16 @@ describe('LiLimit Popup', () => {
         visitLimit: '5',
       });
 
-      const messageEl = document.getElementById('message');
+      const messageEl = document.getElementById('message') as HTMLElement;
       expect(messageEl.textContent).toContain('No limit time');
       expect(messageEl.textContent).toContain('5 visits');
     });
 
     test('should send both messages when both limits are provided', () => {
-      const hostnameInput = document.getElementById('hostname');
-      const timeLimitInput = document.getElementById('timeLimit');
-      const visitLimitInput = document.getElementById('visitLimit');
-      const form = document.getElementById('limitsForm');
+      const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+      const timeLimitInput = document.getElementById('timeLimit') as HTMLInputElement;
+      const visitLimitInput = document.getElementById('visitLimit') as HTMLInputElement;
+      const form = document.getElementById('limitsForm') as HTMLFormElement;
 
       hostnameInput.value = 'facebook.com';
       timeLimitInput.value = '60';
@@ -110,23 +135,23 @@ describe('LiLimit Popup', () => {
     });
 
     test('should show no limits message when submitting empty form', () => {
-      const hostnameInput = document.getElementById('hostname');
-      const form = document.querySelector('form');
+      const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
+      const form = document.querySelector('form') as HTMLFormElement;
 
       hostnameInput.value = 'test.com';
 
       form.dispatchEvent(new Event('submit'));
 
       expect(mockChrome.runtime.sendMessage).not.toHaveBeenCalled();
-      const messageEl = document.getElementById('message');
+      const messageEl = document.getElementById('message') as HTMLElement;
       expect(messageEl.textContent).toBe('No limits applied on test.com');
     });
   });
 
   describe('Buttons', () => {
     test('DeleteLimits button should send deLimit message', () => {
-      const btn = document.getElementById('DeleteLimits');
-      const hostnameInput = document.getElementById('hostname');
+      const btn = document.getElementById('DeleteLimits') as HTMLButtonElement;
+      const hostnameInput = document.getElementById('hostname') as HTMLInputElement;
 
       hostnameInput.value = 'todelete.com';
 
@@ -143,9 +168,9 @@ describe('LiLimit Popup', () => {
 
   describe('Tab Switching', () => {
     test('should initialize with Set Limits tab active', () => {
-      const setLimitsTab = document.getElementById('set-limits');
-      const statsTab = document.getElementById('stats');
-      const allLimitsTab = document.getElementById('all-limits');
+      const setLimitsTab = document.getElementById('set-limits') as HTMLElement;
+      const statsTab = document.getElementById('stats') as HTMLElement;
+      const allLimitsTab = document.getElementById('all-limits') as HTMLElement;
 
       expect(setLimitsTab.classList.contains('active')).toBe(true);
       expect(statsTab.classList.contains('active')).toBe(false);
@@ -153,26 +178,28 @@ describe('LiLimit Popup', () => {
     });
 
     test('should switch to Live Stats tab when clicked', () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ stats: [] });
 
       statsButton.click();
 
-      const setLimitsTab = document.getElementById('set-limits');
-      const statsTab = document.getElementById('stats');
+      const setLimitsTab = document.getElementById('set-limits') as HTMLElement;
+      const statsTab = document.getElementById('stats') as HTMLElement;
 
       expect(setLimitsTab.classList.contains('active')).toBe(false);
       expect(statsTab.classList.contains('active')).toBe(true);
     });
 
     test('should switch to All Limits tab when clicked', () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ limits: [] });
 
       allLimitsButton.click();
 
-      const setLimitsTab = document.getElementById('set-limits');
-      const allLimitsTab = document.getElementById('all-limits');
+      const setLimitsTab = document.getElementById('set-limits') as HTMLElement;
+      const allLimitsTab = document.getElementById('all-limits') as HTMLElement;
 
       expect(setLimitsTab.classList.contains('active')).toBe(false);
       expect(allLimitsTab.classList.contains('active')).toBe(true);
@@ -181,7 +208,7 @@ describe('LiLimit Popup', () => {
 
   describe('Live Stats Display', () => {
     test('should load stats when Stats tab is clicked', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ stats: [] });
 
       statsButton.click();
@@ -192,18 +219,18 @@ describe('LiLimit Popup', () => {
     });
 
     test('should display empty state when no stats available', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ stats: [] });
 
       statsButton.click();
       await Promise.resolve();
 
-      const statsContent = document.getElementById('statsContent');
+      const statsContent = document.getElementById('statsContent') as HTMLElement;
       expect(statsContent.innerHTML).toContain('No activity yet today');
     });
 
     test('should display stats cards with segmented progress bar', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         stats: [
           {
@@ -218,7 +245,7 @@ describe('LiLimit Popup', () => {
       statsButton.click();
       await Promise.resolve();
 
-      const statsContent = document.getElementById('statsContent');
+      const statsContent = document.getElementById('statsContent') as HTMLElement;
       expect(statsContent.innerHTML).toContain('example.com');
       expect(statsContent.innerHTML).toContain('30 min');
       expect(statsContent.innerHTML).toContain('3/5');
@@ -228,7 +255,7 @@ describe('LiLimit Popup', () => {
     });
 
     test('should apply correct color to progress bar based on percentage', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         stats: [
           {
@@ -242,25 +269,27 @@ describe('LiLimit Popup', () => {
       statsButton.click();
       await Promise.resolve();
 
-      const statsContent = document.getElementById('statsContent');
+      const statsContent = document.getElementById('statsContent') as HTMLElement;
       expect(statsContent.innerHTML).toContain('warning');
     });
 
     test('should handle stats load error gracefully', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockRejectedValue(new Error('Load failed'));
 
       statsButton.click();
       await Promise.resolve();
 
-      const statsContent = document.getElementById('statsContent');
+      const statsContent = document.getElementById('statsContent') as HTMLElement;
       expect(statsContent.innerHTML).toContain('Failed to load stats');
     });
   });
 
   describe('All Limits Display', () => {
     test('should load limits when All Limits tab is clicked', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ limits: [] });
 
       allLimitsButton.click();
@@ -271,18 +300,22 @@ describe('LiLimit Popup', () => {
     });
 
     test('should display empty state when no limits set', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ limits: [] });
 
       allLimitsButton.click();
       await Promise.resolve();
 
-      const limitsContent = document.getElementById('limitsContent');
+      const limitsContent = document.getElementById('limitsContent') as HTMLElement;
       expect(limitsContent.innerHTML).toContain('No limits set yet');
     });
 
     test('should display limit cards with time and visit limits', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [
           {
@@ -296,14 +329,16 @@ describe('LiLimit Popup', () => {
       allLimitsButton.click();
       await Promise.resolve();
 
-      const limitsContent = document.getElementById('limitsContent');
+      const limitsContent = document.getElementById('limitsContent') as HTMLElement;
       expect(limitsContent.innerHTML).toContain('example.com');
       expect(limitsContent.innerHTML).toContain('30 minutes per visit');
       expect(limitsContent.innerHTML).toContain('5 visits per day');
     });
 
     test('should display multiple limit cards', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [
           { hostname: 'example.com', timeLimit: 30, visitLimit: 5 },
@@ -314,7 +349,7 @@ describe('LiLimit Popup', () => {
       allLimitsButton.click();
       await Promise.resolve();
 
-      const limitsContent = document.getElementById('limitsContent');
+      const limitsContent = document.getElementById('limitsContent') as HTMLElement;
       expect(limitsContent.innerHTML).toContain('example.com');
       expect(limitsContent.innerHTML).toContain('test.com');
     });
@@ -322,7 +357,9 @@ describe('LiLimit Popup', () => {
 
   describe('Search Functionality', () => {
     test('should filter limits based on search input', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [
           { hostname: 'example.com', timeLimit: 30 },
@@ -333,17 +370,19 @@ describe('LiLimit Popup', () => {
       allLimitsButton.click();
       await Promise.resolve();
 
-      const searchInput = document.getElementById('searchLimits');
+      const searchInput = document.getElementById('searchLimits') as HTMLInputElement;
       searchInput.value = 'example';
       searchInput.dispatchEvent(new Event('input'));
 
-      const limitsContent = document.getElementById('limitsContent');
+      const limitsContent = document.getElementById('limitsContent') as HTMLElement;
       expect(limitsContent.innerHTML).toContain('example.com');
       expect(limitsContent.innerHTML).not.toContain('test.com');
     });
 
     test('should show empty state when search has no results', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [{ hostname: 'example.com', timeLimit: 30 }],
       });
@@ -351,18 +390,18 @@ describe('LiLimit Popup', () => {
       allLimitsButton.click();
       await Promise.resolve();
 
-      const searchInput = document.getElementById('searchLimits');
+      const searchInput = document.getElementById('searchLimits') as HTMLInputElement;
       searchInput.value = 'nonexistent';
       searchInput.dispatchEvent(new Event('input'));
 
-      const limitsContent = document.getElementById('limitsContent');
+      const limitsContent = document.getElementById('limitsContent') as HTMLElement;
       expect(limitsContent.innerHTML).toContain('No matching limits found');
     });
   });
 
   describe('Refresh Stats Button', () => {
     test('should refresh stats when button is clicked', async () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ stats: [] });
 
       statsButton.click();
@@ -370,7 +409,7 @@ describe('LiLimit Popup', () => {
 
       mockChrome.runtime.sendMessage.mockClear();
 
-      const refreshButton = document.getElementById('refreshStats');
+      const refreshButton = document.getElementById('refreshStats') as HTMLButtonElement;
       refreshButton.click();
 
       await Promise.resolve();
@@ -379,12 +418,12 @@ describe('LiLimit Popup', () => {
     });
 
     test('should add spinning class to refresh button when clicked', () => {
-      const statsButton = document.querySelector('[data-tab="stats"]');
+      const statsButton = document.querySelector('[data-tab="stats"]') as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({ stats: [] });
 
       statsButton.click();
 
-      const refreshButton = document.getElementById('refreshStats');
+      const refreshButton = document.getElementById('refreshStats') as HTMLButtonElement;
       refreshButton.click();
 
       expect(refreshButton.classList.contains('spinning')).toBe(true);
@@ -393,7 +432,9 @@ describe('LiLimit Popup', () => {
 
   describe('Delete Limit from Card', () => {
     test('should delete limit when delete button in card is clicked', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [{ hostname: 'example.com', timeLimit: 30 }],
       });
@@ -405,8 +446,8 @@ describe('LiLimit Popup', () => {
 
       mockChrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
 
-      const deleteButton = document.querySelector('.delete-limit-btn');
-      const limitCard = deleteButton.closest('.limit-card');
+      const deleteButton = document.querySelector('.delete-limit-btn') as HTMLButtonElement;
+      const limitCard = deleteButton.closest('.limit-card') as HTMLElement;
 
       deleteButton.click();
 
@@ -421,7 +462,9 @@ describe('LiLimit Popup', () => {
     });
 
     test('should not delete limit when user cancels confirmation', async () => {
-      const allLimitsButton = document.querySelector('[data-tab="all-limits"]');
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
       mockChrome.runtime.sendMessage.mockResolvedValue({
         limits: [{ hostname: 'example.com', timeLimit: 30 }],
       });
@@ -432,7 +475,7 @@ describe('LiLimit Popup', () => {
       mockChrome.runtime.sendMessage.mockClear();
       global.confirm = jest.fn(() => false);
 
-      const deleteButton = document.querySelector('.delete-limit-btn');
+      const deleteButton = document.querySelector('.delete-limit-btn') as HTMLButtonElement;
       deleteButton.click();
 
       await Promise.resolve();

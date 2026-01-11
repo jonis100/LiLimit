@@ -15,8 +15,10 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 ### Manual Installation
 
 1. Download and extract the source code from [GitHub](https://github.com/jonis100/LiLimit)
-2. Navigate to `chrome://extensions/` and enable Developer mode
-3. Click "Load unpacked" and select the extracted folder
+2. Install dependencies: `npm install`
+3. Build the extension: `npm run build`
+4. Navigate to `chrome://extensions/` and enable Developer mode
+5. Click "Load unpacked" and select the `dist` folder from the built project
 
 ## Features
 

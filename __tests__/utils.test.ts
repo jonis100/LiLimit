@@ -1,9 +1,9 @@
 /**
- * Unit tests for utils.js
+ * Unit tests for utils.ts
  * Testing utility functions of the LiLimit Chrome extension
  */
 
-import { extractHostname, limits_to_string } from '../extension/utils.js';
+import { extractHostname, limits_to_string } from '../src/shared/utils.js';
 
 describe('extractHostname function', () => {
   test('should extract hostname from full URL', () => {
@@ -42,8 +42,8 @@ describe('extractHostname function', () => {
 describe('limits_to_string function', () => {
   test('should format single host with both limits', () => {
     const hosts = ['example.com'];
-    const timeLimits = { 'example.com': 30 };
-    const visitLimits = { 'example.com': 5 };
+    const timeLimits: { [key: string]: number | undefined } = { 'example.com': 30 };
+    const visitLimits: { [key: string]: number | undefined } = { 'example.com': 5 };
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
@@ -54,8 +54,8 @@ describe('limits_to_string function', () => {
 
   test('should format host with only time limit', () => {
     const hosts = ['github.com'];
-    const timeLimits = { 'github.com': 60 };
-    const visitLimits = {};
+    const timeLimits: { [key: string]: number | undefined } = { 'github.com': 60 };
+    const visitLimits: { [key: string]: number | undefined } = {};
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
@@ -66,8 +66,8 @@ describe('limits_to_string function', () => {
 
   test('should format host with only visit limit', () => {
     const hosts = ['reddit.com'];
-    const timeLimits = {};
-    const visitLimits = { 'reddit.com': 10 };
+    const timeLimits: { [key: string]: number | undefined } = {};
+    const visitLimits: { [key: string]: number | undefined } = { 'reddit.com': 10 };
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
@@ -78,8 +78,14 @@ describe('limits_to_string function', () => {
 
   test('should format multiple hosts', () => {
     const hosts = ['example.com', 'github.com'];
-    const timeLimits = { 'example.com': 30, 'github.com': 60 };
-    const visitLimits = { 'example.com': 5, 'github.com': 10 };
+    const timeLimits: { [key: string]: number | undefined } = {
+      'example.com': 30,
+      'github.com': 60,
+    };
+    const visitLimits: { [key: string]: number | undefined } = {
+      'example.com': 5,
+      'github.com': 10,
+    };
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
@@ -92,9 +98,9 @@ describe('limits_to_string function', () => {
   });
 
   test('should handle empty hosts array', () => {
-    const hosts = [];
-    const timeLimits = {};
-    const visitLimits = {};
+    const hosts: string[] = [];
+    const timeLimits: { [key: string]: number | undefined } = {};
+    const visitLimits: { [key: string]: number | undefined } = {};
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
@@ -103,8 +109,8 @@ describe('limits_to_string function', () => {
 
   test('should handle host with no limits', () => {
     const hosts = ['example.com'];
-    const timeLimits = {};
-    const visitLimits = {};
+    const timeLimits: { [key: string]: number | undefined } = {};
+    const visitLimits: { [key: string]: number | undefined } = {};
 
     const result = limits_to_string(hosts, timeLimits, visitLimits);
 
