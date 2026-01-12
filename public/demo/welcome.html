@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to LiLimit</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #071022 0%, #071728 100%);
+        width: 1280px;
+        height: 800px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e6eef6;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .container {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 80px;
+        padding: 40px 80px;
+        animation: fadeIn 0.8s ease-out;
+        justify-content: space-between;
+      }
+
+      .left-content {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+        flex: 0 0 auto;
+      }
+
+      .right-content {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        text-align: left;
+        flex: 0 0 auto;
+      }
+
+      .right-content p {
+        font-size: 2em;
+        font-weight: 700;
+        color: #6ee7b7;
+        letter-spacing: 1px;
+        line-height: 1.4;
+        animation: fadeIn 0.8s ease-out 0.4s backwards;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .logo {
+        width: 120px;
+        height: 120px;
+        border-radius: 16px;
+        animation: scaleIn 0.6s ease-out 0.2s backwards;
+        filter: brightness(0) saturate(100%) invert(70%) sepia(48%) saturate(393%)
+          hue-rotate(114deg) brightness(103%) contrast(102%);
+      }
+
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.85);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      h1 {
+        font-size: 2.8em;
+        font-weight: 700;
+        color: #6ee7b7;
+        letter-spacing: 3px;
+        animation: fadeIn 0.8s ease-out 0.4s backwards;
+      }
+
+      .cta-button {
+        display: inline-block;
+        padding: 16px 40px;
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #032018;
+        background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 24px rgba(110, 231, 183, 0.3);
+        animation: fadeIn 0.8s ease-out 0.6s backwards;
+      }
+
+      .cta-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px rgba(110, 231, 183, 0.4);
+      }
+
+      .cta-button:active {
+        transform: translateY(-1px);
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2em;
+        }
+
+        .logo {
+          width: 160px;
+          height: 160px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-logo">
+      <img src="../public/images/lily.png" alt="" />
+    </div>
+
+    <div class="container">
+      <div class="left-content">
+        <h1>LILIMIT</h1>
+        <img src="../public/images/lily.png" alt="LiLimit" class="logo" />
+      </div>
+      <div class="right-content">
+        <p>Control your life</p>
+        <p>Control your privacy</p>
+      </div>
+    </div>
+  </body>
+</html>

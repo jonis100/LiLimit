@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 3 - Freedom</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #071022 0%, #071728 100%);
+        width: 1280px;
+        height: 800px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e6eef6;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+        padding: 80px;
+      }
+
+      .content {
+        padding-right: 40px;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 12px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .logo-text {
+        font-size: 2.5em;
+        font-weight: 700;
+        color: #6ee7b7;
+        letter-spacing: 1px;
+      }
+
+      .step-number {
+        display: inline-block;
+        font-size: 7em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6ee7b7, #4dd6a1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 30px;
+        line-height: 1;
+      }
+
+      h1 {
+        font-size: 3.5em;
+        font-weight: 700;
+        margin-bottom: 30px;
+        color: #e6eef6;
+        line-height: 1.2;
+      }
+
+      p {
+        font-size: 1.4em;
+        line-height: 1.7;
+        color: #9aa4b2;
+        margin-bottom: 20px;
+      }
+
+      .demo-box {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Stats view styles */
+      .extension-popup {
+        width: 420px;
+        background: rgba(15, 23, 42, 0.95);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+
+      .popup-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .popup-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 6px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .popup-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e6eef6;
+        flex: 1;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 4px;
+        border-radius: 10px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: #9aa4b2;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+
+      .tab-btn.active {
+        background: rgba(110, 231, 183, 0.15);
+        color: #6ee7b7;
+      }
+
+      .stats-container {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .stats-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e6eef6;
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .stat-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.2), rgba(77, 214, 161, 0.1));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6ee7b7;
+        font-size: 14px;
+      }
+
+      .stat-hostname {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e6eef6;
+        flex: 1;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+
+      .stat-label {
+        color: #9aa4b2;
+      }
+
+      .stat-value {
+        font-weight: 600;
+        color: #e6eef6;
+      }
+
+      .progress-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 4px;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="content">
+        <div class="bg-logo">
+          <img src="../public/images/lily.png" alt="" />
+        </div>
+        <div class="logo-container">
+          <img src="../public/images/lily.png" alt="LiLimit" class="logo" />
+          <span class="logo-text">LILIMIT</span>
+        </div>
+
+        <div class="step-number">3.</div>
+        <h1>Block distractions<br />across all your<br />devices</h1>
+        <p>Open source, privacy-focused, and completely free. Your data stays on your device.</p>
+      </div>
+
+      <div class="demo-box">
+        <div class="extension-popup">
+          <div class="popup-header">
+            <img src="../public/images/lily.png" alt="LiLimit" class="popup-logo" />
+            <div class="popup-title">LiLimit</div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab-btn">Set Limits</button>
+            <button class="tab-btn active">Live Stats</button>
+            <button class="tab-btn">All Limits</button>
+          </div>
+
+          <div class="stats-container">
+            <div class="stats-header">
+              <div class="stats-title">Today's Activity</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">📘</div>
+                <div class="stat-hostname">facebook.com</div>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Visits today</span>
+                <span class="stat-value">3 / 5</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 60%"></div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">🐦</div>
+                <div class="stat-hostname">twitter.com</div>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Visits today</span>
+                <span class="stat-value">3 / 3</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 100%; background: #ef4444"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
