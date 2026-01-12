@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 2 - Limit Enforcement</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #071022 0%, #071728 100%);
+        width: 1280px;
+        height: 800px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e6eef6;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+        padding: 80px;
+      }
+
+      .content {
+        padding-left: 40px;
+        order: 2;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 12px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .logo-text {
+        font-size: 2.5em;
+        font-weight: 700;
+        color: #6ee7b7;
+        letter-spacing: 1px;
+      }
+
+      .step-number {
+        display: inline-block;
+        font-size: 7em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6ee7b7, #4dd6a1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 30px;
+        line-height: 1;
+      }
+
+      h1 {
+        font-size: 3.5em;
+        font-weight: 700;
+        margin-bottom: 30px;
+        color: #e6eef6;
+        line-height: 1.2;
+      }
+
+      p {
+        font-size: 1.4em;
+        line-height: 1.7;
+        color: #9aa4b2;
+        margin-bottom: 20px;
+      }
+
+      .demo-box {
+        background: transparent;
+        border: none;
+        border-radius: 24px;
+        padding: 20px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        order: 1;
+      }
+
+      /* Time exceeded page styles */
+      .exceeded-page {
+        text-align: center;
+        color: #e6eef6;
+        max-width: 500px;
+      }
+
+      .exceeded-logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 30px;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .exceeded-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 8px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .exceeded-logo-text {
+        font-size: 1.8em;
+        font-weight: 600;
+        color: #6ee7b7;
+      }
+
+      .time-icon {
+        font-size: 5em;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+        filter: drop-shadow(0 4px 12px rgba(110, 231, 183, 0.3));
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 1;
+        }
+      }
+
+      .exceeded-page h1 {
+        font-size: 2em;
+        margin-bottom: 16px;
+        background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700;
+      }
+
+      .exceeded-page p {
+        font-size: 1em;
+        line-height: 1.6;
+        margin-bottom: 12px;
+        color: #9aa4b2;
+      }
+
+      .info-box {
+        background: rgba(110, 231, 183, 0.05);
+        border: 1px solid rgba(110, 231, 183, 0.15);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 24px;
+      }
+
+      .info-box p {
+        font-size: 0.9em;
+        color: #e6eef6;
+        margin: 0 0 12px 0;
+      }
+
+      .countdown {
+        font-size: 1.3em;
+        font-weight: 700;
+        color: #6ee7b7;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background-color: rgba(110, 231, 183, 0.05);
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="demo-box">
+        <div class="exceeded-page">
+          <div class="exceeded-logo-container">
+            <div class="bg-logo">
+              <img src="../public/images/lily.png" alt="" />
+            </div>
+          </div>
+
+          <div class="time-icon">⏰</div>
+          <h1>Time Limit Exceeded</h1>
+          <p>You've reached your time limit for this website.</p>
+          <p>Take a break and come back later!</p>
+
+          <div class="info-box">
+            <p>Remember: This limit was set to help you maintain a healthy balance.</p>
+            <div class="countdown">Resets at midnight</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="logo-container">
+          <img src="../public/images/lily.png" alt="LiLimit" class="logo" />
+          <span class="logo-text">LILIMIT</span>
+        </div>
+
+        <div class="step-number">2.</div>
+        <h1>When time<br />runs out, LiLimit<br />cuts you off</h1>
+        <p>Stay focused and build healthier digital habits without constant willpower battles.</p>
+      </div>
+    </div>
+  </body>
+</html>

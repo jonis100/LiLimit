@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screenshot 1 - Set Limits</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #071022 0%, #071728 100%);
+        width: 1280px;
+        height: 800px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e6eef6;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Giant background logo */
+      .bg-logo {
+        position: absolute;
+        left: -500px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1000px;
+        height: 1000px;
+        opacity: 0.03;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .bg-logo img {
+        width: 100%;
+        height: 100%;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .container {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 80px;
+        align-items: center;
+        padding: 80px;
+      }
+
+      .content {
+        padding-right: 40px;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 12px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .logo-text {
+        font-size: 2.5em;
+        font-weight: 700;
+        color: #6ee7b7;
+        letter-spacing: 1px;
+      }
+
+      .step-number {
+        display: inline-block;
+        font-size: 7em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6ee7b7, #4dd6a1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 30px;
+        line-height: 1;
+      }
+
+      h1 {
+        font-size: 3.5em;
+        font-weight: 700;
+        margin-bottom: 30px;
+        color: #e6eef6;
+        line-height: 1.2;
+      }
+
+      p {
+        font-size: 1.4em;
+        line-height: 1.7;
+        color: #9aa4b2;
+        margin-bottom: 20px;
+      }
+
+      .demo-box {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(2, 6, 23, 0.6);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Extension popup styles */
+      .extension-popup {
+        width: 420px;
+        background: rgba(15, 23, 42, 0.95);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+
+      .popup-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .popup-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.1));
+        padding: 6px;
+        filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%)
+          hue-rotate(95deg) brightness(95%) contrast(90%);
+      }
+
+      .popup-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e6eef6;
+        flex: 1;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 4px;
+        border-radius: 10px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: #9aa4b2;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+
+      .tab-btn.active {
+        background: rgba(110, 231, 183, 0.15);
+        color: #6ee7b7;
+      }
+
+      .form {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 10px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .label {
+        display: block;
+        font-size: 11px;
+        color: #9aa4b2;
+        margin-bottom: 6px;
+      }
+
+      .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .form-header > .label {
+        margin-bottom: 0;
+      }
+
+      .current-tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(90deg, rgba(110, 231, 183, 0.15), rgba(77, 214, 161, 0.12));
+        border: 1px solid rgba(110, 231, 183, 0.3);
+        color: #6ee7b7;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+
+      .current-tab-btn:hover {
+        background: linear-gradient(90deg, rgba(110, 231, 183, 0.25), rgba(77, 214, 161, 0.2));
+        border-color: #6ee7b7;
+        transform: translateY(-1px);
+      }
+
+      .current-tab-btn svg {
+        flex-shrink: 0;
+      }
+
+      .input {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(0, 0, 0, 0.2);
+        color: #e6eef6;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .two-col {
+        display: flex;
+        gap: 8px;
+      }
+
+      .two-col > div {
+        flex: 1;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: linear-gradient(90deg, #6ee7b7, #4dd6a1);
+        color: #032018;
+      }
+
+      .btn.danger {
+        background: linear-gradient(90deg, #ff8787, #ff6b6b);
+        color: #2b0606;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-logo">
+      <img src="../public/images/lily.png" alt="" />
+    </div>
+
+    <div class="container">
+      <div class="content">
+        <div class="logo-container">
+          <img src="../public/images/lily.png" alt="LiLimit" class="logo" />
+          <span class="logo-text">LILIMIT</span>
+        </div>
+
+        <div class="step-number">1.</div>
+        <h1>Set daily<br />time limits<br />on websites</h1>
+        <p>
+          Take control of your digital life by setting custom time and visit limits for any website.
+        </p>
+      </div>
+
+      <div class="demo-box">
+        <div class="extension-popup">
+          <div class="popup-header">
+            <img src="../public/images/lily.png" alt="LiLimit" class="popup-logo" />
+            <div class="popup-title">LiLimit</div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab-btn active">Set Limits</button>
+            <button class="tab-btn">Live Stats</button>
+            <button class="tab-btn">All Limits</button>
+          </div>
+
+          <div class="form">
+            <div class="form-header">
+              <label class="label">Website (URL or hostname)</label>
+              <button class="current-tab-btn">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
+                </svg>
+                <span>Current Tab</span>
+              </button>
+            </div>
+            <input
+              type="text"
+              class="input"
+              placeholder="e.g. https://www.example.com or example.com"
+              value="facebook.com"
+            />
+
+            <div class="two-col">
+              <div>
+                <label class="label">Time limit (minutes)</label>
+                <input type="number" class="input" placeholder="No time limit yet" value="30" />
+              </div>
+              <div>
+                <label class="label">Visit limit (per day)</label>
+                <input type="number" class="input" placeholder="No visit limit yet" value="5" />
+              </div>
+            </div>
+
+            <div class="buttons">
+              <button class="btn primary">Set limit</button>
+              <button class="btn danger">Delete limit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
