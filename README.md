@@ -30,9 +30,13 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 ## Usage
 
-### Demo
+### Visit Limit Demo
 
-[Watch a demo of LiLimit in action](https://github.com/user-attachments/assets/6102ab7f-9b77-42ee-bd88-408bd753dcfe)
+![Visit Limit](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/VisitLimit.gif)
+
+### Time Limit Demo
+
+![Time Limit](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/TimeLimit.gif)
 
 ### Setting Limits
 
