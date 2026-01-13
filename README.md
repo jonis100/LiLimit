@@ -32,11 +32,11 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 ### Visit Limit Demo
 
-![Visit Limit](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/VisitLimit.gif)
+![Demonstration of the visit limit feature](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/VisitLimit.gif)
 
 ### Time Limit Demo
 
-![Time Limit](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/TimeLimit.gif)
+![Demonstration of the time limit feature](https://raw.githubusercontent.com/jonis100/LiLimit/main/public/demo/TimeLimit.gif)
 
 ### Setting Limits
 
