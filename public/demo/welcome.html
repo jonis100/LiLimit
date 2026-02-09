@@ -80,13 +80,49 @@
         flex: 0 0 auto;
       }
 
-      .right-content p {
+      .quote-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 32px;
+        padding-top: 28px;
+        border-top: 2px solid rgba(110, 231, 183, 0.2);
+      }
+
+      .quote-section p {
         font-size: 2em;
         font-weight: 700;
         color: #6ee7b7;
         letter-spacing: 1px;
-        line-height: 1.4;
-        animation: fadeIn 0.8s ease-out 0.4s backwards;
+        line-height: 1.3;
+        font-style: italic;
+        text-shadow: 0 2px 12px rgba(110, 231, 183, 0.2);
+        animation: fadeIn 0.8s ease-out 1s backwards;
+      }
+
+      .features {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+        animation: fadeIn 0.8s ease-out 0.8s backwards;
+      }
+
+      .feature-item {
+        font-size: 2.1em;
+        font-weight: 500;
+        color: #94a3b8;
+        line-height: 1.6;
+        padding-left: 32px;
+        position: relative;
+      }
+
+      .feature-item::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: #6ee7b7;
+        font-weight: 700;
       }
 
       @keyframes fadeIn {
@@ -167,17 +203,26 @@
   </head>
   <body>
     <div class="bg-logo">
-      <img src="../public/images/lily.png" alt="" />
+      <img src="../images/lily.png" alt="" />
     </div>
 
     <div class="container">
       <div class="left-content">
         <h1>LILIMIT</h1>
-        <img src="../public/images/lily.png" alt="LiLimit" class="logo" />
+        <img src="../images/lily.png" alt="LiLimit" class="logo" />
       </div>
       <div class="right-content">
-        <p>Control your life</p>
-        <p>Control your privacy</p>
+        <div class="features">
+          <div class="feature-item">Block distracting sites in seconds</div>
+          <div class="feature-item">No accounts. No tracking. No cloud.</div>
+          <div class="feature-item">All data stays on your device</div>
+          <div class="feature-item">Open source & transparent</div>
+          <div class="feature-item">Focus without surveillance</div>
+        </div>
+        <div class="quote-section">
+          <p>Control your life</p>
+          <p>Control your privacy</p>
+        </div>
       </div>
     </div>
   </body>
