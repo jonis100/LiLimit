@@ -366,6 +366,13 @@ chrome.runtime.onMessage.addListener(
             delete visitLimits[hostname];
             delete timeLimits[hostname];
             delete visitCounts[hostname];
+            for (const tabID in timerStartTimes) {
+              if (timerStartTimes[tabID].hostname === hostname) {
+                clearTimeout(timers[tabID]);
+                delete timers[tabID];
+                delete timerStartTimes[tabID];
+              }
+            }
             updateStorage();
             sendResponse({ success: true });
             break;
