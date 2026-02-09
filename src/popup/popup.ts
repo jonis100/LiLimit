@@ -424,13 +424,12 @@ const tips: string[] = [
   'Click the refresh icon to update your stats',
 ];
 
-let currentTipIndex = 0;
+let currentTipIndex = Math.floor(Math.random() * tips.length);
 
-function showRandomTip(): void {
+function showCurrentTip(): void {
   const footerTip = document.querySelector<HTMLElement>('.footer-tip');
   if (!footerTip) return;
 
-  currentTipIndex = Math.floor(Math.random() * tips.length);
   footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
 }
 
@@ -443,6 +442,8 @@ function showNextTip(): void {
 }
 
 function startTipRotation(): void {
+  showCurrentTip();
+
   setInterval(() => {
     const footerTip = document.querySelector<HTMLElement>('.footer-tip');
     if (!footerTip) return;
@@ -450,7 +451,7 @@ function startTipRotation(): void {
     footerTip.classList.add('fade-out');
 
     setTimeout(() => {
-      showRandomTip();
+      showNextTip();
       footerTip.classList.remove('fade-out');
     }, 300);
   }, 10000);
@@ -534,7 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initExportStats();
   initLogoEasterEgg();
-  showRandomTip();
   startTipRotation();
 
   const themeToggle = document.getElementById('themeToggle');

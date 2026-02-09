@@ -4,7 +4,7 @@
 
 ### New Features
 
-- **Logo Easter Egg:** Triple-clicking the LiLimit logo (3 clicks within 2 seconds) reveals a friendly message with feedback contact information. A subtle visual cue (cursor pointer and hover animation) hints at the logo's interactivity.
+- **Logo Easter Egg:** Triple-clicking the LiLimit logo (3 clicks within 10 seconds) reveals a friendly message with feedback contact information. A subtle visual cue (cursor pointer and hover animation) hints at the logo's interactivity.
 - **Next-Tip Button:** Added an interactive button next to footer tips allowing users to manually navigate through helpful tips instead of waiting for the automatic rotation. Tips include usage hints and the feedback email address.
 
 ### Bug Fixes
