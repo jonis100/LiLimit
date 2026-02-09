@@ -441,19 +441,22 @@ function showNextTip(): void {
   footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
 }
 
+function transitionTip(updateTipFn: () => void): void {
+  const footerTip = document.querySelector<HTMLElement>('.footer-tip');
+  if (!footerTip) return;
+
+  footerTip.classList.add('fade-out');
+  setTimeout(() => {
+    updateTipFn();
+    footerTip.classList.remove('fade-out');
+  }, 300);
+}
+
 function startTipRotation(): void {
   showCurrentTip();
 
   setInterval(() => {
-    const footerTip = document.querySelector<HTMLElement>('.footer-tip');
-    if (!footerTip) return;
-
-    footerTip.classList.add('fade-out');
-
-    setTimeout(() => {
-      showNextTip();
-      footerTip.classList.remove('fade-out');
-    }, 300);
+    transitionTip(showNextTip);
   }, 10000);
 }
 
@@ -544,16 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const nextTipBtn = document.getElementById('nextTipBtn');
   if (nextTipBtn) {
-    nextTipBtn.addEventListener('click', () => {
-      const footerTip = document.querySelector<HTMLElement>('.footer-tip');
-      if (!footerTip) return;
-
-      footerTip.classList.add('fade-out');
-
-      setTimeout(() => {
-        showNextTip();
-        footerTip.classList.remove('fade-out');
-      }, 300);
-    });
+    nextTipBtn.addEventListener('click', () => transitionTip(showNextTip));
   }
 });
