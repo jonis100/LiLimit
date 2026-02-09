@@ -82,6 +82,10 @@ if (form) {
     } else {
       showMessage(`No limits applied on ${hostname}`);
     }
+
+    hostnameInput.value = '';
+    timeLimitInput.value = '';
+    visitLimitInput.value = '';
   });
 }
 
@@ -410,6 +414,7 @@ function showMessage(text: string, duration: number = 5000, isError: boolean = f
 }
 
 const tips: string[] = [
+  'Got feedback? Email us at LiLimit@protonmail.com',
   'You can leave time or visits empty to apply only one limit',
   'Enter either a full URL or just the hostname',
   'Visit limits reset every day at midnight',
@@ -419,12 +424,22 @@ const tips: string[] = [
   'Click the refresh icon to update your stats',
 ];
 
+let currentTipIndex = 0;
+
 function showRandomTip(): void {
   const footerTip = document.querySelector<HTMLElement>('.footer-tip');
   if (!footerTip) return;
 
-  const randomTip = tips[Math.floor(Math.random() * tips.length)];
-  footerTip.textContent = `Tip: ${randomTip}`;
+  currentTipIndex = Math.floor(Math.random() * tips.length);
+  footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
+}
+
+function showNextTip(): void {
+  const footerTip = document.querySelector<HTMLElement>('.footer-tip');
+  if (!footerTip) return;
+
+  currentTipIndex = (currentTipIndex + 1) % tips.length;
+  footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
 }
 
 function startTipRotation(): void {
@@ -483,15 +498,62 @@ function initExportStats(): void {
   });
 }
 
+function initLogoEasterEgg(): void {
+  const logo = document.querySelector<HTMLImageElement>('.logo');
+  if (!logo) return;
+
+  let clickCount = 0;
+  let resetTimer: NodeJS.Timeout | undefined;
+
+  logo.addEventListener('click', () => {
+    clickCount++;
+
+    if (resetTimer) {
+      clearTimeout(resetTimer);
+    }
+
+    resetTimer = setTimeout(() => {
+      clickCount = 0;
+    }, 10000);
+
+    if (clickCount === 3) {
+      showMessage(
+        '👋 Hey, glad you’re here! Got feedback? Drop us a line at LiLimit@protonmail.com',
+        10000
+      );
+      clickCount = 0;
+      if (resetTimer) {
+        clearTimeout(resetTimer);
+      }
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initTabs();
   initExportStats();
+  initLogoEasterEgg();
   showRandomTip();
   startTipRotation();
 
   const themeToggle = document.getElementById('themeToggle');
   if (themeToggle) {
     themeToggle.addEventListener('click', toggleTheme);
+  }
+
+  const nextTipBtn = document.getElementById('nextTipBtn');
+  if (nextTipBtn) {
+    nextTipBtn.addEventListener('click', () => {
+      const footerTip = document.querySelector<HTMLElement>('.footer-tip');
+      if (!footerTip) return;
+
+      footerTip.classList.add('fade-out');
+
+      setTimeout(() => {
+        showNextTip();
+        footerTip.classList.remove('fade-out');
+      }, 300);
+    });
   }
 });

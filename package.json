@@ -1,6 +1,6 @@
 {
   "name": "lilimit",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
   "type": "module",
   "scripts": {
