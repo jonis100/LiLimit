@@ -25,11 +25,18 @@ interface TimerStartTimes {
   [tabId: string]: TimerStartTime;
 }
 
+interface Settings {
+  countSwitchAsVisit: boolean;
+}
+
+const DEFAULT_SETTINGS: Settings = { countSwitchAsVisit: true };
+
 interface StorageData {
   timeLimits?: Limits;
   visitLimits?: Limits;
   visitCounts?: VisitCounts;
   timerStartTimes?: TimerStartTimes;
+  settings?: Settings;
 }
 
 interface MessageRequest {
@@ -37,6 +44,7 @@ interface MessageRequest {
   hostname?: string;
   visitLimit?: number;
   timeLimit?: number;
+  settings?: Settings;
 }
 
 interface StatItem {
@@ -59,6 +67,8 @@ const timers: Timers = {};
 const lastHandle: LastHandle = {};
 const timerStartTimes: TimerStartTimes = {};
 
+let settings: Settings = { ...DEFAULT_SETTINGS };
+
 let isInitialized: boolean = false;
 let initializationPromise: Promise<void> | null = null;
 
@@ -68,7 +78,7 @@ async function initializeFromStorage(): Promise<void> {
 
   initializationPromise = new Promise((resolve, reject) => {
     chrome.storage.local.get(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
+      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'settings'],
       (result: StorageData) => {
         if (chrome.runtime.lastError) {
           console.error('Error loading data from storage:', chrome.runtime.lastError);
@@ -84,6 +94,7 @@ async function initializeFromStorage(): Promise<void> {
           if (result && result.visitCounts) Object.assign(visitCounts, result.visitCounts);
           if (result && result.timerStartTimes)
             Object.assign(timerStartTimes, result.timerStartTimes);
+          if (result && result.settings) Object.assign(settings, result.settings);
           console.log('Loaded persisted data from storage:', {
             timeLimits,
             visitLimits,
@@ -309,6 +320,7 @@ chrome.tabs.onUpdated.addListener(
 chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo) => {
   try {
     await initializeFromStorage();
+    if (!settings.countSwitchAsVisit) return;
 
     chrome.tabs.get(activeInfo.tabId, (tab: chrome.tabs.Tab) => {
       if (typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
@@ -407,6 +419,20 @@ chrome.runtime.onMessage.addListener(
             });
 
             sendResponse({ stats });
+            break;
+          }
+
+          case 'getSettings': {
+            sendResponse({ settings });
+            break;
+          }
+
+          case 'setSettings': {
+            if (request.settings) {
+              Object.assign(settings, request.settings);
+              chrome.storage.local.set({ settings });
+            }
+            sendResponse({ success: true });
             break;
           }
 

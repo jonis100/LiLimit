@@ -5,6 +5,7 @@ import type {
   StatsResponse,
   LimitsResponse,
   DeLimitResponse,
+  SettingsResponse,
 } from '../shared/types.js';
 
 function initTabs(): void {
@@ -18,6 +19,7 @@ function initTabs(): void {
 
       tabButtons.forEach((btn) => btn.classList.remove('active'));
       tabContents.forEach((content) => content.classList.remove('active'));
+      document.getElementById('settingsBtn')?.classList.remove('active');
 
       button.classList.add('active');
       const targetElement = document.getElementById(targetTab);
@@ -181,6 +183,14 @@ async function loadStats(): Promise<void> {
   } catch (error) {
     console.error('Error loading stats:', error);
     statsContent.innerHTML = '<div class="error-state">Failed to load stats</div>';
+  }
+}
+
+async function loadSettings(): Promise<void> {
+  const response = (await chrome.runtime.sendMessage({ type: 'getSettings' })) as SettingsResponse;
+  const toggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
+  if (toggle && response?.settings) {
+    toggle.checked = response.settings.countSwitchAsVisit;
   }
 }
 
@@ -540,9 +550,31 @@ document.addEventListener('DOMContentLoaded', () => {
   initLogoEasterEgg();
   startTipRotation();
 
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach((btn) => btn.classList.remove('active'));
+      document.querySelectorAll<HTMLElement>('.tab-content').forEach((c) => c.classList.remove('active'));
+      settingsBtn.classList.add('active');
+      const settingsPanel = document.getElementById('settings');
+      if (settingsPanel) settingsPanel.classList.add('active');
+      loadSettings();
+    });
+  }
+
   const themeToggle = document.getElementById('themeToggle');
   if (themeToggle) {
     themeToggle.addEventListener('click', toggleTheme);
+  }
+
+  const switchToggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
+  if (switchToggle) {
+    switchToggle.addEventListener('change', () => {
+      chrome.runtime.sendMessage({
+        type: 'setSettings',
+        settings: { countSwitchAsVisit: switchToggle.checked },
+      });
+    });
   }
 
   const nextTipBtn = document.getElementById('nextTipBtn');

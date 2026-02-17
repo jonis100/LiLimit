@@ -23,4 +23,12 @@ export interface DeLimitResponse {
   success: boolean;
 }
 
-export type MessageResponse = StatsResponse | LimitsResponse | DeLimitResponse | void;
+export interface Settings {
+  countSwitchAsVisit: boolean;
+}
+
+export interface SettingsResponse {
+  settings: Settings;
+}
+
+export type MessageResponse = StatsResponse | LimitsResponse | DeLimitResponse | SettingsResponse | void;

@@ -6,11 +6,16 @@
 import { jest } from '@jest/globals';
 import type { StatsResponse, LimitsResponse, StatItem, LimitItem } from '../src/shared/types.js';
 
+interface MockSettings {
+  countSwitchAsVisit: boolean;
+}
+
 interface MockStorageData {
   timeLimits?: Record<string, number>;
   visitLimits?: Record<string, number>;
   visitCounts?: Record<string, number>;
   timerStartTimes?: Record<string, { hostname: string; startTime: number }>;
+  settings?: MockSettings;
 }
 
 interface MockTab {
@@ -107,7 +112,7 @@ Object.defineProperty(global, 'chrome', {
 
 mockStorageGet.mockImplementation((...args: unknown[]) => {
   const callback = args[args.length - 1] as (data: MockStorageData) => void;
-  callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {} });
+  callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {}, settings: { countSwitchAsVisit: false } });
 });
 
 let messageListener: MessageListener;
@@ -125,7 +130,7 @@ describe('Background Script', () => {
     alarmListener = global.chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
     expect(global.chrome.storage.local.get).toHaveBeenCalledWith(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
+      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'settings'],
       expect.any(Function)
     );
   });
@@ -138,7 +143,7 @@ describe('Background Script', () => {
     mockTabsQuery.mockResolvedValue([]);
     mockStorageGet.mockImplementation((...args: unknown[]) => {
       const callback = args[args.length - 1] as (data: MockStorageData) => void;
-      callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {} });
+      callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {}, settings: { countSwitchAsVisit: false } });
     });
   });
 
@@ -162,7 +167,7 @@ describe('Background Script', () => {
 
     test('should load persisted data from storage on startup', () => {
       expect(mockStorageGet).toHaveBeenCalledWith(
-        ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
+        ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'settings'],
         expect.any(Function)
       );
     });
@@ -441,7 +446,39 @@ describe('Background Script', () => {
   });
 
   describe('Tab Event - onActivated', () => {
-    test('should handle tab activation with valid URL', async () => {
+    test('should skip handleHostname when countSwitchAsVisit is false (default)', async () => {
+      // Ensure settings have countSwitchAsVisit = false (default)
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: false } },
+        {},
+        jest.fn()
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const callback = args[1] as (tab: MockTab) => void;
+        callback({ url: 'https://example.com', pendingUrl: undefined });
+      });
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      await onActivatedListener({ tabId: 1 });
+
+      const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
+      expect(logMessages.some((msg) => msg.includes('tab switched hostname'))).toBe(false);
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should call handleHostname when countSwitchAsVisit is true', async () => {
+      // Enable countSwitchAsVisit via message
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: true } },
+        {},
+        jest.fn()
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       mockTabsGet.mockImplementation((...args: unknown[]) => {
         const callback = args[1] as (tab: MockTab) => void;
         callback({ url: 'https://example.com', pendingUrl: undefined });
@@ -456,7 +493,15 @@ describe('Background Script', () => {
       consoleSpy.mockRestore();
     });
 
-    test('should handle new tabs with pendingUrl', async () => {
+    test('should handle new tabs with pendingUrl when countSwitchAsVisit is true', async () => {
+      // Enable countSwitchAsVisit via message
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: true } },
+        {},
+        jest.fn()
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       mockTabsGet.mockImplementation((...args: unknown[]) => {
         const callback = args[1] as (tab: MockTab) => void;
         callback({ url: 'about:blank', pendingUrl: 'https://pending.com' });
@@ -470,6 +515,74 @@ describe('Background Script', () => {
       expect(logMessages.some((msg) => msg.includes('new tab from onActivated'))).toBe(true);
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Message Handling - Settings', () => {
+    test('should return settings via getSettings', async () => {
+      // Reset to default first (previous tests may have changed it)
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: false } },
+        {},
+        jest.fn()
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getSettings' }, {}, sendResponse);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse.mock.calls[0][0] as { settings: MockSettings };
+      expect(response.settings).toBeDefined();
+      expect(response.settings.countSwitchAsVisit).toBe(false);
+    });
+
+    test('should update settings via setSettings', async () => {
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: true } },
+        {},
+        sendResponse
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      expect(mockStorageSet).toHaveBeenCalledWith({ settings: { countSwitchAsVisit: true } });
+    });
+
+    test('should return updated settings after setSettings', async () => {
+      const sendResponse1 = jest.fn();
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: true } },
+        {},
+        sendResponse1
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const sendResponse2 = jest.fn();
+      messageListener({ type: 'getSettings' }, {}, sendResponse2);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse2.mock.calls[0][0] as { settings: MockSettings };
+      expect(response.settings.countSwitchAsVisit).toBe(true);
+    });
+
+    test('should persist settings to chrome.storage.local', async () => {
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: 'setSettings', settings: { countSwitchAsVisit: false } },
+        {},
+        sendResponse
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockStorageSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          settings: expect.objectContaining({ countSwitchAsVisit: false }),
+        })
+      );
     });
   });
 
