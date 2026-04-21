@@ -83,7 +83,6 @@ body {
   filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%) hue-rotate(95deg)
     brightness(95%) contrast(90%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
 }
 .logo:hover {
   transform: rotate(5deg) scale(1.05);
@@ -97,7 +96,7 @@ body {
 
 .theme-toggle {
   position: relative;
-  background: var(--card-bg);
+  background: var(--hover-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px;
@@ -107,16 +106,31 @@ body {
   justify-content: center;
   transition:
     background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: auto;
   color: var(--text);
 }
 .theme-toggle:hover {
-  background: var(--hover-bg);
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
+}
+[data-theme='light'] .theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 .theme-toggle:active {
   transform: scale(0.95);
+}
+
+#settingsBtn.active {
+  background: rgba(110, 231, 183, 0.15);
+  color: var(--accent);
+  border-color: rgba(110, 231, 183, 0.3);
+  box-shadow: 0 2px 8px rgba(110, 231, 183, 0.1);
+}
+[data-theme='light'] #settingsBtn.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 .theme-toggle .sun-icon,
 .theme-toggle .moon-icon {
@@ -818,4 +832,150 @@ input[type='number']:focus::-webkit-outer-spin-button {
 
 .form-header > .label {
   margin-bottom: 0;
+}
+
+.settings-container {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme='light'] .settings-container {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--text);
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.setting-row:hover {
+  background: var(--hover-bg);
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.setting-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  transition: background 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--muted);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: rgba(110, 231, 183, 0.3);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+  background: var(--accent);
+}
+
+[data-theme='light'] .toggle-slider {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.setting-row-clickable {
+  cursor: pointer;
+}
+
+.theme-icons {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.theme-icons .sun-icon,
+.theme-icons .moon-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-icons .sun-icon {
+  opacity: 0;
+  transform: rotate(180deg) scale(0.5);
+}
+
+.theme-icons .moon-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='light'] .theme-icons .sun-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='light'] .theme-icons .moon-icon {
+  opacity: 0;
+  transform: rotate(-180deg) scale(0.5);
 }

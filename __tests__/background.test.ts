@@ -6,11 +6,17 @@
 import { jest } from '@jest/globals';
 import type { StatsResponse, LimitsResponse, StatItem, LimitItem } from '../src/shared/types.js';
 
+interface MockSettings {
+  dailyTimeLimit: boolean;
+}
+
 interface MockStorageData {
   timeLimits?: Record<string, number>;
   visitLimits?: Record<string, number>;
   visitCounts?: Record<string, number>;
   timerStartTimes?: Record<string, { hostname: string; startTime: number }>;
+  dailyTimeSpent?: Record<string, number>;
+  settings?: MockSettings;
 }
 
 interface MockTab {
@@ -107,7 +113,13 @@ Object.defineProperty(global, 'chrome', {
 
 mockStorageGet.mockImplementation((...args: unknown[]) => {
   const callback = args[args.length - 1] as (data: MockStorageData) => void;
-  callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {} });
+  callback({
+    timeLimits: {},
+    visitLimits: {},
+    visitCounts: {},
+    timerStartTimes: {},
+    settings: { dailyTimeLimit: false },
+  });
 });
 
 let messageListener: MessageListener;
@@ -125,7 +137,7 @@ describe('Background Script', () => {
     alarmListener = global.chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
     expect(global.chrome.storage.local.get).toHaveBeenCalledWith(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
+      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'dailyTimeSpent', 'settings'],
       expect.any(Function)
     );
   });
@@ -138,7 +150,13 @@ describe('Background Script', () => {
     mockTabsQuery.mockResolvedValue([]);
     mockStorageGet.mockImplementation((...args: unknown[]) => {
       const callback = args[args.length - 1] as (data: MockStorageData) => void;
-      callback({ timeLimits: {}, visitLimits: {}, visitCounts: {}, timerStartTimes: {} });
+      callback({
+        timeLimits: {},
+        visitLimits: {},
+        visitCounts: {},
+        timerStartTimes: {},
+        settings: { dailyTimeLimit: false },
+      });
     });
   });
 
@@ -162,7 +180,14 @@ describe('Background Script', () => {
 
     test('should load persisted data from storage on startup', () => {
       expect(mockStorageGet).toHaveBeenCalledWith(
-        ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes'],
+        [
+          'timeLimits',
+          'visitLimits',
+          'visitCounts',
+          'timerStartTimes',
+          'dailyTimeSpent',
+          'settings',
+        ],
         expect.any(Function)
       );
     });
@@ -441,22 +466,7 @@ describe('Background Script', () => {
   });
 
   describe('Tab Event - onActivated', () => {
-    test('should handle tab activation with valid URL', async () => {
-      mockTabsGet.mockImplementation((...args: unknown[]) => {
-        const callback = args[1] as (tab: MockTab) => void;
-        callback({ url: 'https://example.com', pendingUrl: undefined });
-      });
-
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-
-      await onActivatedListener({ tabId: 1 });
-
-      expect(mockTabsGet).toHaveBeenCalledWith(1, expect.any(Function));
-
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle new tabs with pendingUrl', async () => {
+    test('should not call handleHostname for new tabs with pendingUrl', async () => {
       mockTabsGet.mockImplementation((...args: unknown[]) => {
         const callback = args[1] as (tab: MockTab) => void;
         callback({ url: 'about:blank', pendingUrl: 'https://pending.com' });
@@ -468,8 +478,121 @@ describe('Background Script', () => {
 
       const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
       expect(logMessages.some((msg) => msg.includes('new tab from onActivated'))).toBe(true);
+      expect(logMessages.some((msg) => msg.includes('tab switched hostname'))).toBe(false);
 
       consoleSpy.mockRestore();
+    });
+
+    test('should call handleHostname when tab has a valid URL', async () => {
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const callback = args[1] as (tab: MockTab) => void;
+        callback({ id: 1, url: 'https://example.com', pendingUrl: undefined });
+      });
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      await onActivatedListener({ tabId: 1 });
+
+      expect(mockTabsGet).toHaveBeenCalledWith(1, expect.any(Function));
+      const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
+      expect(logMessages.some((msg) => msg.includes('tab switched hostname'))).toBe(true);
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should pause previous tab timer in daily mode when switching tabs', async () => {
+      const hostname = `dailypausetest${Date.now()}.com`;
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, jest.fn());
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 5 }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const tabId = args[0] as number;
+        const callback = args[1] as (tab: MockTab) => void;
+        callback(
+          tabId === 200
+            ? { id: 200, url: `https://${hostname}`, pendingUrl: undefined }
+            : { id: tabId, url: 'https://other.com', pendingUrl: undefined }
+        );
+      });
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      await onActivatedListener({ tabId: 200 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await onActivatedListener({ tabId: 201 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
+      expect(logMessages.some((msg) => msg.includes(`Paused daily timer for ${hostname}`))).toBe(
+        true
+      );
+
+      consoleSpy.mockRestore();
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+  });
+
+  describe('Message Handling - Settings', () => {
+    test('should return settings via getSettings', async () => {
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getSettings' }, {}, sendResponse);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse.mock.calls[0][0] as { settings: MockSettings };
+      expect(response.settings).toBeDefined();
+      expect(response.settings.dailyTimeLimit).toBe(false);
+    });
+
+    test('should update settings via setSettings', async () => {
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: 'setSettings', settings: { dailyTimeLimit: true } },
+        {},
+        sendResponse
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      expect(mockStorageSet).toHaveBeenCalledWith(
+        expect.objectContaining({ settings: { dailyTimeLimit: true } }),
+        expect.any(Function)
+      );
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    test('should return updated dailyTimeLimit after setSettings', async () => {
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getSettings' }, {}, sendResponse);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse.mock.calls[0][0] as { settings: MockSettings };
+      expect(response.settings.dailyTimeLimit).toBe(true);
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    test('should persist dailyTimeLimit to chrome.storage.local', async () => {
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockStorageSet).toHaveBeenCalledWith(
+        expect.objectContaining({ settings: { dailyTimeLimit: false } }),
+        expect.any(Function)
+      );
     });
   });
 
@@ -600,6 +723,7 @@ describe('Background Script', () => {
           visitLimits: expect.any(Object),
           visitCounts: expect.any(Object),
           timerStartTimes: expect.any(Object),
+          dailyTimeSpent: expect.any(Object),
         }),
         expect.any(Function)
       );
