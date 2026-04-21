@@ -525,9 +525,9 @@ describe('Background Script', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
-      expect(
-        logMessages.some((msg) => msg.includes(`Paused daily timer for ${hostname}`))
-      ).toBe(true);
+      expect(logMessages.some((msg) => msg.includes(`Paused daily timer for ${hostname}`))).toBe(
+        true
+      );
 
       consoleSpy.mockRestore();
 
@@ -553,7 +553,11 @@ describe('Background Script', () => {
     test('should update settings via setSettings', async () => {
       const sendResponse = jest.fn();
 
-      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, sendResponse);
+      messageListener(
+        { type: 'setSettings', settings: { dailyTimeLimit: true } },
+        {},
+        sendResponse
+      );
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
