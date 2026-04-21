@@ -329,6 +329,7 @@ function updateStorage(): void {
           console.error('Error saving data to storage:', chrome.runtime.lastError);
         } else {
           console.log('Saved data to storage:', {
+            settings,
             timeLimits,
             visitLimits,
             visitCounts,
@@ -403,7 +404,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
     currentActiveTabId = activeInfo.tabId;
 
     chrome.tabs.get(activeInfo.tabId, (tab: chrome.tabs.Tab) => {
-      if (typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
+      if (tab && typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
         const hostname = extractHostname(tab.url);
         console.log('tab switched hostname extractHostname: ', hostname, 'call handleHostname..');
         handleHostname(hostname, tab.id);

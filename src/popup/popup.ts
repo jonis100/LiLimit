@@ -586,6 +586,8 @@ document.addEventListener('DOMContentLoaded', () => {
         settings: { dailyTimeLimit: dailyTimeLimitToggle.checked },
       });
     };
+    // TODO: Refactor to avoid duplicate code for click and keydown handlers.
+    // In this case setSettings set twice, not efficient but not a bug.
     dailyTimeLimitRow.addEventListener('click', () => {
       dailyTimeLimitToggle.checked = !dailyTimeLimitToggle.checked;
       sendDailyTimeLimitSetting();
