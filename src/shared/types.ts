@@ -24,11 +24,16 @@ export interface DeLimitResponse {
 }
 
 export interface Settings {
-  countSwitchAsVisit: boolean;
+  dailyTimeLimit: boolean;
 }
 
 export interface SettingsResponse {
   settings: Settings;
 }
 
-export type MessageResponse = StatsResponse | LimitsResponse | DeLimitResponse | SettingsResponse | void;
+export type MessageResponse =
+  | StatsResponse
+  | LimitsResponse
+  | DeLimitResponse
+  | SettingsResponse
+  | void;

@@ -196,12 +196,18 @@
       <div id="settings" class="tab-content">
         <div class="settings-container">
           <h3 class="settings-title">Settings</h3>
-          <div class="setting-row">
+          <div
+            id="themeToggle"
+            class="setting-row setting-row-clickable"
+            role="button"
+            tabindex="0"
+            aria-label="Toggle theme"
+          >
             <div class="setting-info">
               <span class="setting-label">Dark mode</span>
               <span class="setting-desc">Toggle between dark and light theme</span>
             </div>
-            <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+            <div class="theme-icons">
               <svg
                 class="sun-icon"
                 width="18"
@@ -232,15 +238,24 @@
               >
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
-            </button>
-          </div>
-          <div class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label">Count tab switch as new visit</span>
-              <span class="setting-desc">When off, only navigating to a URL counts as a visit</span>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="countSwitchAsVisit" />
+          </div>
+          <div
+            id="dailyTimeLimitRow"
+            class="setting-row setting-row-clickable"
+            role="button"
+            tabindex="0"
+            aria-label="Toggle daily time limit"
+          >
+            <div class="setting-info">
+              <span class="setting-label">Daily time limit</span>
+              <span class="setting-desc"
+                >When on, time accumulates across all visits today instead of resetting each
+                visit</span
+              >
+            </div>
+            <label class="toggle" aria-hidden="true">
+              <input type="checkbox" id="dailyTimeLimit" tabindex="-1" />
               <span class="toggle-slider"></span>
             </label>
           </div>

@@ -2,229 +2,168 @@
 
 ## Motivation
 
-Both `chrome.tabs.onUpdated` (URL navigation) and `chrome.tabs.onActivated` (tab switching) call `handleHostname()`, which increments `visitCounts[hostname]` whenever `lastHandle[tabID] != hostname`.
+Currently, the time limit per website resets on every visit — each time you navigate to a site, you get the full X minutes fresh. This means you can visit a site 20 times and never accumulate more than X minutes of time pressure.
 
-This means switching to an already-open tab can count as a new visit. Additionally, because `lastHandle` is in-memory only, any MV3 service worker restart resets it — so the very next tab activation after a restart counts as a fresh visit even without any navigation.
-
-Users should be able to choose what counts as a visit: new URL navigations only, or tab switches too.
+The settings tab lets users switch to **daily time limit mode**, where time spent on a website accumulates across all visits throughout the day. Once you've used up your X-minute budget for the day, you're blocked — regardless of how many separate visits it took.
 
 ---
 
 ## New Setting
 
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `countSwitchAsVisit` | `boolean` | **`true`** | When `false`, switching to an existing tab does **not** count as a new visit and does **not** restart the timer. Only navigating to a new URL (via `onUpdated`) triggers `handleHostname()`. |
+| Key              | Type      | Default     | Description                                                                                                                            |
+| ---------------- | --------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `dailyTimeLimit` | `boolean` | **`false`** | When `true`, time spent on a site accumulates across all visits today. When `false` (default), each visit gets a fresh X-minute timer. |
 
 **Scope:** Global (applies to all tracked hostnames).
 
 ---
 
-## Behavior Alignment
+## Behavior
 
-Both visit counting and timer start share the **same** guard condition in `handleHostname()` ([background.ts:196-218](src/background/background.ts#L196-L218)):
+### Per-visit mode (`dailyTimeLimit = false`, default)
 
-```ts
-// visit counting
-if (visitLimits[hostname] && lastHandle[tabID] != hostname) {
-  visitCounts[hostname]++;
-}
-// timer start
-if (timeLimits[hostname] && lastHandle[tabID] !== hostname) {
-  setTimerForTab(tabID, hostname, timeLimit);
-}
-```
+Existing behavior: each new navigation to a tracked hostname starts a fresh timer. Switching to the tab or re-opening it resets nothing — the same visit's timer keeps running.
 
-Because both use the same `lastHandle` check, the setting controls **both** in one shot:
-- `countSwitchAsVisit = false` → `onActivated` **skips** `handleHostname()` entirely → no visit increment, no timer restart on tab switch.
-- `countSwitchAsVisit = true` → `onActivated` calls `handleHostname()` as it does today → visit count and timer both fire on switch.
+### Daily mode (`dailyTimeLimit = true`)
 
-Timers are already persisted via `timerStartTimes` in storage and restored on service-worker wake by `restoreTimers()` ([background.ts:169-191](src/background/background.ts#L169-L191)), so skipping `handleHostname()` on activation doesn't break ongoing time tracking.
+- A `dailyTimeSpent[hostname]` counter (in ms) accumulates time across all visits.
+- When you navigate to or activate a tracked tab: check remaining = `timeLimit * 60000 - dailyTimeSpent[hostname]`. If ≤ 0, redirect immediately. Otherwise start a timer for the remaining time.
+- When you switch away from a tab (another tab activated): add elapsed ms to `dailyTimeSpent[hostname]` and pause the timer.
+- When you navigate to a different URL in the same tab: add elapsed ms before clearing the timer.
+- When the timer fires (time runs out mid-visit): mark `dailyTimeSpent[hostname] = timeLimit * 60000` so any new visit is blocked immediately.
+- At midnight daily reset: `dailyTimeSpent` is cleared along with visit counts and timers.
+- On service worker restart (`restoreTimers`): elapsed time since the interrupted session start is added to `dailyTimeSpent` before resuming.
 
 ---
 
-## Implementation Steps
+## Implementation
 
-### 1. Types — `src/background/background.ts` (local interfaces)
-
-`StorageData` and `MessageRequest` are defined **locally** in [background.ts:28-40](src/background/background.ts#L28-L40), not in `types.ts`.
-
-Add a `Settings` interface and update `StorageData`:
+### 1. Types — `src/shared/types.ts`
 
 ```ts
-interface Settings {
-  countSwitchAsVisit: boolean;
+export interface Settings {
+  dailyTimeLimit: boolean;
 }
-
-const DEFAULT_SETTINGS: Settings = { countSwitchAsVisit: true };
 ```
-
-Add `settings?: Settings` to `StorageData`.
-
-Also export `Settings` from `src/shared/types.ts` so the popup can use it for the message response type.
 
 ### 2. Background state — `src/background/background.ts`
 
-Add a module-level variable after the existing state declarations (line ~60):
-
 ```ts
-let settings: Settings = { ...DEFAULT_SETTINGS };
+interface Settings {
+  dailyTimeLimit: boolean;
+}
+const DEFAULT_SETTINGS: Settings = { dailyTimeLimit: false };
 ```
 
-#### 2a. Load settings on startup
-
-Update `initializeFromStorage()` ([background.ts:65-106](src/background/background.ts#L65-L106)) to include `'settings'` in the keys array:
+New module-level state:
 
 ```ts
-chrome.storage.local.get(
-  ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'settings'],
-  ...
-)
+const dailyTimeSpent: { [hostname: string]: number } = {};
+let currentActiveTabId: number | null = null;
 ```
 
-And in the result handler:
+Add `dailyTimeSpent` to `StorageData`, `initializeFromStorage` (keys + result handler), `updateStorage`, and the daily reset alarm handler.
+
+### 3. `handleHostname()` — time limit branch
 
 ```ts
-if (result && result.settings) Object.assign(settings, result.settings);
-```
-
-> **Do NOT add settings to `updateStorage()`** — settings rarely change (user action only), while `updateStorage()` runs on every timer tick. Keep them separate.
-
-#### 2b. Guard `onActivated`
-
-In `chrome.tabs.onActivated` ([background.ts:309-325](src/background/background.ts#L309-L325)):
-
-```ts
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  try {
-    await initializeFromStorage();
-    if (!settings.countSwitchAsVisit) return;   // ← new guard
-
-    chrome.tabs.get(activeInfo.tabId, (tab) => {
-      if (typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
-        const hostname = extractHostname(tab.url);
-        handleHostname(hostname, tab.id);
+if (timeLimits[hostname]) {
+  if (settings.dailyTimeLimit) {
+    if (!timers[tabID]) {
+      // no active timer = tab was inactive or first visit
+      const remainingMs = timeLimits[hostname] * 60000 - (dailyTimeSpent[hostname] || 0);
+      if (remainingMs <= 0) {
+        redirectTabToTimeExceeded(tabID);
+        return;
       }
-    });
-  } catch (error) {
-    console.log("Can't handle in onActivated:", error);
+      setTimerForTab(tabID, hostname, remainingMs / 60000);
+    }
+  } else if (lastHandle[tabID] !== hostname) {
+    setTimerForTab(tabID, hostname, timeLimits[hostname]);
   }
-});
+}
 ```
 
-#### 2c. Message handlers
-
-Add to the `switch` in `onMessage` ([background.ts:338-430](src/background/background.ts#L338-L430)):
+### 4. `onActivated` — pause previous tab in daily mode
 
 ```ts
-case 'getSettings': {
-  sendResponse({ settings });
-  break;
-}
-
-case 'setSettings': {
-  if (request.settings) {
-    Object.assign(settings, request.settings);
-    chrome.storage.local.set({ settings });
+if (
+  settings.dailyTimeLimit &&
+  currentActiveTabId !== null &&
+  currentActiveTabId !== activeInfo.tabId
+) {
+  if (timerStartTimes[prevTabId]) {
+    const elapsed = Date.now() - timerStartTimes[prevTabId].startTime;
+    dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
+    clearTimeout(timers[prevTabId]);
+    delete timers[prevTabId];
+    delete timerStartTimes[prevTabId];
+    updateStorage();
   }
-  sendResponse({ success: true });
-  break;
 }
+currentActiveTabId = activeInfo.tabId;
 ```
 
-Update `MessageRequest` to accept an optional `settings` field:
+### 5. `onUpdated` — accumulate before clearing timer
+
+When navigating away from a hostname in daily mode, add elapsed time before the existing timer-clear logic.
+
+### 6. `setTimerForTab` — mark hostname fully spent on expiry
 
 ```ts
-interface MessageRequest {
-  type: string;
-  hostname?: string;
-  visitLimit?: number;
-  timeLimit?: number;
-  settings?: Settings;   // ← add
+const timer = setTimeout(() => {
+  if (settings.dailyTimeLimit) dailyTimeSpent[hostname] = timeLimits[hostname] * 60000;
+  // ... existing cleanup + redirect
+}, remainingMinutes * 60000);
+```
+
+### 7. `restoreTimers` — daily mode path
+
+Accumulate elapsed time from the interrupted segment, then resume or block:
+
+```ts
+if (settings.dailyTimeLimit) {
+  dailyTimeSpent[hostname] += Date.now() - startTime;
+  delete timerStartTimes[tabID];
+  const remainingMs = timeLimit * 60000 - dailyTimeSpent[hostname];
+  remainingMs > 0
+    ? setTimerForTab(tabID, hostname, remainingMs / 60000)
+    : redirectTabToTimeExceeded(tabID);
 }
 ```
 
-### 3. Popup UI — `public/popup.html`
+### 8. Popup UI — `public/popup.html`
 
-Add a 4th tab button to the `<nav>` (after "All Limits", [popup.html:48-52](public/popup.html#L48-L52)):
-
-```html
-<button class="tab-btn" data-tab="settings">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" stroke-width="2">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l..."/>  <!-- gear icon -->
-  </svg>
-</button>
-```
-
-Add the settings panel (after the "all-limits" div, [popup.html:210](public/popup.html#L210)):
+Settings panel row:
 
 ```html
-<!-- Settings Tab -->
-<div id="settings" class="tab-content">
-  <div class="settings-container">
-    <h3 class="settings-title">Settings</h3>
-    <div class="setting-row">
-      <div class="setting-info">
-        <span class="setting-label">Count tab switch as new visit</span>
-        <span class="setting-desc">When off, only navigating to a URL counts as a visit</span>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="countSwitchAsVisit" />
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+<div class="setting-row">
+  <div class="setting-info">
+    <span class="setting-label">Daily time limit</span>
+    <span class="setting-desc"
+      >When on, time accumulates across all visits today instead of resetting each visit</span
+    >
   </div>
+  <label class="toggle">
+    <input type="checkbox" id="dailyTimeLimit" />
+    <span class="toggle-slider"></span>
+  </label>
 </div>
 ```
 
-Existing tab system in `initTabs()` ([popup.ts:10-34](src/popup/popup.ts#L10-L34)) already handles any `data-tab` / `.tab-content` pairs — no JS change needed for tab switching itself.
+### 9. Popup logic — `src/popup/popup.ts`
 
-### 4. Popup logic — `src/popup/popup.ts`
+`loadSettings()` reads `response.settings.dailyTimeLimit` into `#dailyTimeLimit` checkbox.
+Change listener sends `{ type: 'setSettings', settings: { dailyTimeLimit: toggle.checked } }`.
 
-Add a `loadSettings()` function and a change listener:
+### 10. Tests — `__tests__/`
 
-```ts
-async function loadSettings(): Promise<void> {
-  const response = await chrome.runtime.sendMessage({ type: 'getSettings' });
-  const toggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
-  if (toggle && response?.settings) {
-    toggle.checked = response.settings.countSwitchAsVisit;
-  }
-}
-```
-
-Wire it up in `initTabs()` — when `targetTab === 'settings'`, call `loadSettings()`.
-
-Add toggle change handler in `DOMContentLoaded`:
-
-```ts
-const switchToggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
-if (switchToggle) {
-  switchToggle.addEventListener('change', () => {
-    chrome.runtime.sendMessage({
-      type: 'setSettings',
-      settings: { countSwitchAsVisit: switchToggle.checked },
-    });
-  });
-}
-```
-
-### 5. Styles — `public/popup.css`
-
-- `.settings-container`, `.setting-row` (flex row with space-between)
-- `.setting-label`, `.setting-desc` (text styles)
-- `.toggle` / `.toggle-slider` (CSS-only toggle switch)
-- Use existing theme variables (`--bg`, `--text`, `--border`, etc.) — no new colors needed.
-
-### 6. Tests — `__tests__/`
-
-- `onActivated` skips `handleHostname()` when `countSwitchAsVisit = false`.
-- `onActivated` calls `handleHostname()` when `countSwitchAsVisit = true` (default).
-- Settings default to `{ countSwitchAsVisit: true }` when storage is empty.
-- `setSettings` message persists to `chrome.storage.local`.
-- `getSettings` message returns current settings.
+- Default `settings.dailyTimeLimit` is `false`.
+- `setSettings` persists `dailyTimeLimit` to `chrome.storage.local`.
+- `getSettings` returns current settings.
+- `onActivated` in daily mode pauses the previous tab's timer and accumulates elapsed time.
+- `handleHostname` in daily mode redirects immediately when `dailyTimeSpent >= timeLimit`.
+- Storage keys include `dailyTimeSpent`.
 
 ---
 
@@ -232,12 +171,12 @@ if (switchToggle) {
 
 Not in scope now — candidates for this same settings tab later:
 
-| Setting | Key | Type | Default | Description |
-|---|---|---|---|---|
-| Daily reset time | `resetHour` | `number` (0–23) | `0` | Hour when visit counts and timers reset |
-| Grace period | `gracePeriodSeconds` | `number` | `0` | Extra seconds past limit before block triggers |
-| Show badge count | `showVisitBadge` | `boolean` | `true` | Show remaining visits on extension icon badge |
-| Snooze duration | `snoozeDurationMinutes` | `number` | `5` | How long "snooze" postpones the block page |
-| Block strictness | `blockStyle` | `'hard' \| 'soft'` | `'hard'` | `hard` = redirect, `soft` = overlay with "continue anyway" |
-| Pause all limits | `pauseAll` | `boolean` | `false` | Temporarily disable all tracking without deleting limits |
-| Notification before limit | `notifyBeforeLimit` | `boolean` | `false` | Browser notification when approaching a limit threshold |
+| Setting                   | Key                     | Type               | Default  | Description                                                |
+| ------------------------- | ----------------------- | ------------------ | -------- | ---------------------------------------------------------- |
+| Daily reset time          | `resetHour`             | `number` (0–23)    | `0`      | Hour when visit counts and timers reset                    |
+| Grace period              | `gracePeriodSeconds`    | `number`           | `0`      | Extra seconds past limit before block triggers             |
+| Show badge count          | `showVisitBadge`        | `boolean`          | `true`   | Show remaining visits on extension icon badge              |
+| Snooze duration           | `snoozeDurationMinutes` | `number`           | `5`      | How long "snooze" postpones the block page                 |
+| Block strictness          | `blockStyle`            | `'hard' \| 'soft'` | `'hard'` | `hard` = redirect, `soft` = overlay with "continue anyway" |
+| Pause all limits          | `pauseAll`              | `boolean`          | `false`  | Temporarily disable all tracking without deleting limits   |
+| Notification before limit | `notifyBeforeLimit`     | `boolean`          | `false`  | Browser notification when approaching a limit threshold    |

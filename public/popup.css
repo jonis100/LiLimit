@@ -83,7 +83,6 @@ body {
   filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(1372%) hue-rotate(95deg)
     brightness(95%) contrast(90%);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
 }
 .logo:hover {
   transform: rotate(5deg) scale(1.05);
@@ -941,10 +940,42 @@ input[type='number']:focus::-webkit-outer-spin-button {
   background: rgba(0, 0, 0, 0.12);
 }
 
-.setting-row .theme-toggle {
-  margin-left: 0;
-  flex-shrink: 0;
+.setting-row-clickable {
+  cursor: pointer;
 }
-.setting-row .theme-toggle:hover {
-  transform: none;
+
+.theme-icons {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.theme-icons .sun-icon,
+.theme-icons .moon-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-icons .sun-icon {
+  opacity: 0;
+  transform: rotate(180deg) scale(0.5);
+}
+
+.theme-icons .moon-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='light'] .theme-icons .sun-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+[data-theme='light'] .theme-icons .moon-icon {
+  opacity: 0;
+  transform: rotate(-180deg) scale(0.5);
 }

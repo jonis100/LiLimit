@@ -188,9 +188,9 @@ async function loadStats(): Promise<void> {
 
 async function loadSettings(): Promise<void> {
   const response = (await chrome.runtime.sendMessage({ type: 'getSettings' })) as SettingsResponse;
-  const toggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
+  const toggle = document.getElementById('dailyTimeLimit') as HTMLInputElement;
   if (toggle && response?.settings) {
-    toggle.checked = response.settings.countSwitchAsVisit;
+    toggle.checked = response.settings.dailyTimeLimit;
   }
 }
 
@@ -553,8 +553,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
-      document.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach((btn) => btn.classList.remove('active'));
-      document.querySelectorAll<HTMLElement>('.tab-content').forEach((c) => c.classList.remove('active'));
+      document
+        .querySelectorAll<HTMLButtonElement>('.tab-btn')
+        .forEach((btn) => btn.classList.remove('active'));
+      document
+        .querySelectorAll<HTMLElement>('.tab-content')
+        .forEach((c) => c.classList.remove('active'));
       settingsBtn.classList.add('active');
       const settingsPanel = document.getElementById('settings');
       if (settingsPanel) settingsPanel.classList.add('active');
@@ -565,15 +569,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeToggle = document.getElementById('themeToggle');
   if (themeToggle) {
     themeToggle.addEventListener('click', toggleTheme);
+    themeToggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleTheme();
+      }
+    });
   }
 
-  const switchToggle = document.getElementById('countSwitchAsVisit') as HTMLInputElement;
-  if (switchToggle) {
-    switchToggle.addEventListener('change', () => {
+  const dailyTimeLimitToggle = document.getElementById('dailyTimeLimit') as HTMLInputElement;
+  const dailyTimeLimitRow = document.getElementById('dailyTimeLimitRow');
+  if (dailyTimeLimitToggle && dailyTimeLimitRow) {
+    const sendDailyTimeLimitSetting = () => {
       chrome.runtime.sendMessage({
         type: 'setSettings',
-        settings: { countSwitchAsVisit: switchToggle.checked },
+        settings: { dailyTimeLimit: dailyTimeLimitToggle.checked },
       });
+    };
+    dailyTimeLimitRow.addEventListener('click', () => {
+      dailyTimeLimitToggle.checked = !dailyTimeLimitToggle.checked;
+      sendDailyTimeLimitSetting();
+    });
+    dailyTimeLimitRow.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dailyTimeLimitToggle.checked = !dailyTimeLimitToggle.checked;
+        sendDailyTimeLimitSetting();
+      }
     });
   }
 
