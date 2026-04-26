@@ -891,6 +891,41 @@ input[type='number']:focus::-webkit-outer-spin-button {
   line-height: 1.4;
 }
 
+.info-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-left: 3px;
+  cursor: help;
+  color: var(--muted);
+}
+
+.info-icon .tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  width: 200px;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.info-icon:hover .tooltip,
+.info-icon:focus .tooltip {
+  opacity: 1;
+}
+
 /* Toggle Switch */
 .toggle {
   position: relative;
