@@ -861,6 +861,9 @@ input[type='number']:focus::-webkit-outer-spin-button {
   align-items: center;
   gap: 12px;
   padding: 10px;
+  margin: auto;
+  height: 64px;
+  width: 100%;
   border-radius: 8px;
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -981,17 +984,18 @@ input[type='number']:focus::-webkit-outer-spin-button {
 
 .theme-icons {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 40px;
+  height: 22px;
   flex-shrink: 0;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .theme-icons .sun-icon,
 .theme-icons .moon-icon {
   position: absolute;
-  top: 0;
-  left: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

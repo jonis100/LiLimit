@@ -6,8 +6,10 @@
   "scripts": {
     "copy:static": "mkdir -p dist && cp manifest.json dist/ && cp public/popup.html public/popup.css dist/ && cp -r public/pages dist/ && cp -r public/images dist/",
     "compile": "tsc",
-    "build": "npm run copy:static && npm run compile",
+    "build:popup": "esbuild src/popup/index.tsx --bundle --outfile=dist/popup/popup.js --platform=browser --jsx=automatic --format=esm --minify --define:process.env.NODE_ENV='\"production\"'",
+    "build": "npm run copy:static && npm run compile && npm run build:popup",
     "watch": "npm run copy:static && tsc --watch",
+    "watch:popup": "esbuild src/popup/index.tsx --bundle --outfile=dist/popup/popup.js --platform=browser --jsx=automatic --format=esm --watch",
     "clean": "rm -rf dist",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
@@ -17,12 +19,20 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/chrome": "^0.0.268",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.11.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
+    "esbuild": "^0.28.0",
     "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.2.5",
@@ -38,5 +48,9 @@
     "time-management"
   ],
   "author": "jonis100",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
 }

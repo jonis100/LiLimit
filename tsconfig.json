@@ -26,5 +26,5 @@
     "types": ["chrome", "node", "jest"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "__tests__"]
+  "exclude": ["node_modules", "dist", "__tests__", "src/popup"]
 }
