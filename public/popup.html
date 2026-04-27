@@ -251,7 +251,7 @@
               <span class="setting-label">Count Time Across Visits</span>
               <span class="setting-desc">
                 Controls how time is counted for this site.
-                <span class="info-icon" tabindex="0">
+                <span class="info-icon" tabindex="0" aria-describedby="daily-limit-tooltip">
                   <svg
                     width="11"
                     height="11"
@@ -259,12 +259,13 @@
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2.5"
+                    aria-hidden="true"
                   >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="16" x2="12" y2="12" />
                     <line x1="12" y1="8" x2="12.01" y2="8" />
                   </svg>
-                  <span class="tooltip"
+                  <span class="tooltip" id="daily-limit-tooltip"
                     >On: time limit adds up across all visits today. Off: time limit resets on each
                     new visit.</span
                   >

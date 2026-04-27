@@ -541,7 +541,9 @@ function initExportStats(): void {
 }
 
 function launchConfetti(): void {
+  if (document.getElementById('confetti-canvas')) return;
   const canvas = document.createElement('canvas');
+  canvas.id = 'confetti-canvas';
   canvas.style.cssText =
     'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
   document.body.appendChild(canvas);
@@ -553,7 +555,7 @@ function launchConfetti(): void {
   const colors = ['#f94144', '#f3722c', '#f9c74f', '#90be6d', '#43aa8b', '#577590', '#a855f7'];
   const particles = Array.from({ length: 80 }, () => ({
     x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height - canvas.height,
+    y: Math.random() * -100,
     w: 6 + Math.random() * 6,
     h: 8 + Math.random() * 6,
     color: colors[Math.floor(Math.random() * colors.length)],
