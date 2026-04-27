@@ -22,12 +22,12 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 ## Features
 
-- **Daily Visit Limits**: Set maximum visits per day (resets daily at midnight)
-- **Time Limits**: Limit time per visit (tracked while tab is open, even if inactive)
-- **Daily Time Limit Mode**: Accumulate time across all visits in a day — once your budget is spent, further visits are blocked until midnight
-- **Flexible Configuration**: Set time limits only, visit limits only, or both
-- **Manage Limits**: Add, update, or delete limits for any website
-- **View Dashboard**: See all configured limits at a glance
+- **Daily Visit Limits**: Set maximum visits per day (resets daily at midnight).
+- **Time Per Visit Limits (default)**: Limit how long you can stay on a site per session. Time is tracked while the tab is open, even if it’s inactive.
+- **Daily Time Budget Mode (optional in settings)**: Set a total daily time allowance per site. Time is accumulated across all visits, and once the limit is reached, the site is blocked until midnight.
+- **Flexible Configuration**: Set time limits only, visit limits only, or both.
+- **Manage Limits**: Add, update, or delete limits for any website.
+- **View Dashboard**: See all configured limits at a glance.
 
 ## Usage
 
@@ -57,7 +57,7 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 Open the **Settings** tab in the popup to configure global behavior:
 
-- **Daily time limit** — When enabled, time spent on a site accumulates across all visits throughout the day. Once your time budget is exhausted, further visits are blocked until midnight. When disabled (default), each new visit gets a fresh timer.
+- **Daily Time Budget Mode** — When enabled, time spent on a site accumulates across all visits throughout the day (the timer pauses when you switch tabs). Once your time budget is exhausted, further visits are blocked until midnight. When disabled (default), each new visit gets a fresh timer.
 
 ## License
 
