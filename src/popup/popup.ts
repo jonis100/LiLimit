@@ -434,21 +434,49 @@ const tips: string[] = [
   'Click the refresh icon to update your stats',
 ];
 
-let currentTipIndex = Math.floor(Math.random() * tips.length);
+const featureTips: string[] = [
+  'Enable "Daily time limit" in Settings to track total time spent across all visits today',
+];
+
+interface TipEntry {
+  text: string;
+  isFeature: boolean;
+}
+
+const FEATURE_TIP_WEIGHT = 3;
+
+const tipPool: TipEntry[] = [
+  ...tips.map((t) => ({ text: t, isFeature: false })),
+  ...featureTips.flatMap((t) =>
+    Array.from({ length: FEATURE_TIP_WEIGHT }, () => ({ text: t, isFeature: true }))
+  ),
+];
+
+let currentTipIndex = Math.floor(Math.random() * tipPool.length);
+
+function renderTip(footerTip: HTMLElement, entry: TipEntry): void {
+  footerTip.replaceChildren(
+    entry.isFeature
+      ? Object.assign(document.createElement('strong'), {
+          textContent: `New Feature: ${entry.text}`,
+        })
+      : `Tip: ${entry.text}`
+  );
+}
 
 function showCurrentTip(): void {
   const footerTip = document.querySelector<HTMLElement>('.footer-tip');
   if (!footerTip) return;
 
-  footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
+  renderTip(footerTip, tipPool[currentTipIndex]);
 }
 
 function showNextTip(): void {
   const footerTip = document.querySelector<HTMLElement>('.footer-tip');
   if (!footerTip) return;
 
-  currentTipIndex = (currentTipIndex + 1) % tips.length;
-  footerTip.textContent = `Tip: ${tips[currentTipIndex]}`;
+  currentTipIndex = (currentTipIndex + 1) % tipPool.length;
+  renderTip(footerTip, tipPool[currentTipIndex]);
 }
 
 function transitionTip(updateTipFn: () => void): void {
@@ -512,6 +540,72 @@ function initExportStats(): void {
   });
 }
 
+function launchConfetti(): void {
+  if (document.getElementById('confetti-canvas')) return;
+  const canvas = document.createElement('canvas');
+  canvas.id = 'confetti-canvas';
+  canvas.style.cssText =
+    'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d')!;
+  canvas.width = document.body.clientWidth;
+  canvas.height = document.body.clientHeight;
+
+  const colors = ['#f94144', '#f3722c', '#f9c74f', '#90be6d', '#43aa8b', '#577590', '#a855f7'];
+  const particles = Array.from({ length: 80 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * -100,
+    w: 6 + Math.random() * 6,
+    h: 8 + Math.random() * 6,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    angle: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.15,
+    vx: (Math.random() - 0.5) * 2,
+    vy: 2 + Math.random() * 3,
+  }));
+
+  let frame: number;
+  const start = performance.now();
+  const duration = 2800;
+
+  function draw(now: number) {
+    const elapsed = now - start;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.angle += p.spin;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - elapsed / duration);
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+
+    if (elapsed < duration) {
+      frame = requestAnimationFrame(draw);
+    } else {
+      canvas.remove();
+    }
+  }
+
+  frame = requestAnimationFrame(draw);
+  // Ensure cleanup if the popup closes early
+  window.addEventListener(
+    'unload',
+    () => {
+      cancelAnimationFrame(frame);
+      canvas.remove();
+    },
+    { once: true }
+  );
+}
+
 function initLogoEasterEgg(): void {
   const logo = document.querySelector<HTMLImageElement>('.logo');
   if (!logo) return;
@@ -531,10 +625,8 @@ function initLogoEasterEgg(): void {
     }, 10000);
 
     if (clickCount === 3) {
-      showMessage(
-        '👋 Hey, glad you’re here! Got feedback? Drop us a line at LiLimit@protonmail.com',
-        10000
-      );
+      launchConfetti();
+      showMessage(`👋 Hey, you caught my trick!`, 10000);
       clickCount = 0;
       if (resetTimer) {
         clearTimeout(resetTimer);
