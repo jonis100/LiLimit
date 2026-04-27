@@ -24,6 +24,7 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 
 - **Daily Visit Limits**: Set maximum visits per day (resets daily at midnight)
 - **Time Limits**: Limit time per visit (tracked while tab is open, even if inactive)
+- **Daily Time Limit Mode**: Accumulate time across all visits in a day — once your budget is spent, further visits are blocked until midnight
 - **Flexible Configuration**: Set time limits only, visit limits only, or both
 - **Manage Limits**: Add, update, or delete limits for any website
 - **View Dashboard**: See all configured limits at a glance
@@ -51,6 +52,12 @@ Install directly from the [Chrome Web Store](https://chrome.google.com/webstore/
 - **Update**: Repeat the steps above for an existing website
 - **Delete**: Enter the website URL and click "Delete Limits"
 - **View All**: Click "Show Limits" to see all configured limits
+
+### Settings
+
+Open the **Settings** tab in the popup to configure global behavior:
+
+- **Daily time limit** — When enabled, time spent on a site accumulates across all visits throughout the day. Once your time budget is exhausted, further visits are blocked until midnight. When disabled (default), each new visit gets a fresh timer.
 
 ## License
 
