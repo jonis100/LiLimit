@@ -86,6 +86,10 @@ const DAILY_RESET_ALARM = 'dailyResetAlarm';
 const MS_IN_MINUTE = 60000;
 
 let currentActiveTabId: number | null = null;
+const removedTabIds = new Set<number>();
+
+let isRestored: boolean = false;
+let restorePromise: Promise<void> | null = null;
 
 let isInitialized: boolean = false;
 let initializationPromise: Promise<void> | null = null;
@@ -214,73 +218,94 @@ function pauseTimerForTab(tabID: string | number): void {
 }
 
 async function restoreTimers(): Promise<void> {
-  await initializeFromStorage();
+  if (isRestored) return;
+  if (restorePromise) return restorePromise;
 
-  // Determine the currently active tab so we only resume timers that
-  // should actually be running. Stored segments for non-active tabs are
-  // stale — the tab was likely not being viewed when the service worker
-  // was killed. Dropping them without folding elapsed avoids the rogue
-  // full-budget over-count that previously reset users' daily time.
-  let activeTabId: number | null = null;
-  try {
-    const [activeTab] = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true,
-    });
-    if (activeTab && activeTab.id) {
-      activeTabId = activeTab.id;
+  restorePromise = (async () => {
+    await initializeFromStorage();
+
+    // Determine the currently active tab so we only resume timers that
+    // should actually be running. Stored segments for non-active tabs are
+    // stale — the tab was likely not being viewed when the service worker
+    // was killed. Dropping them without folding elapsed avoids the rogue
+    // full-budget over-count that previously reset users' daily time.
+    let activeTabId: number | null = null;
+    try {
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        lastFocusedWindow: true,
+      });
+      if (activeTab && activeTab.id) {
+        activeTabId = activeTab.id;
+      }
+    } catch (error) {
+      console.log('Could not query active tab during restore:', error);
     }
-  } catch (error) {
-    console.log('Could not query active tab during restore:', error);
-  }
-  currentActiveTabId = activeTabId;
+    currentActiveTabId = activeTabId;
 
-  for (const tabID in timerStartTimes) {
-    const timerData = timerStartTimes[tabID];
-    const hostname = timerData.hostname;
-    const startTime = timerData.startTime;
-    const timeLimit = timeLimits[hostname];
+    for (const tabID in timerStartTimes) {
+      const numericTabId = Number(tabID);
+      const timerData = timerStartTimes[tabID];
+      const hostname = timerData.hostname;
+      const startTime = timerData.startTime;
+      const timeLimit = timeLimits[hostname];
+      lastHandle[tabID] = hostname;
 
-    if (timeLimit === undefined) {
-      delete timerStartTimes[tabID];
-      clearTimeout(timers[tabID]);
-      delete timers[tabID];
-      continue;
-    }
+      if (removedTabIds.has(numericTabId)) {
+        pauseTimerForTab(tabID);
+        delete lastHandle[tabID];
+        continue;
+      }
 
-    // Only resume for the currently active tab; drop all others.
-    if (Number(tabID) !== activeTabId) {
-      delete timerStartTimes[tabID];
-      clearTimeout(timers[tabID]);
-      delete timers[tabID];
-      continue;
-    }
+      if (timeLimit === undefined) {
+        delete timerStartTimes[tabID];
+        clearTimeout(timers[tabID]);
+        delete timers[tabID];
+        continue;
+      }
 
-    if (settings.dailyTimeLimit) {
-      // Fold the elapsed segment for the active tab (it was being viewed).
-      const elapsed = Date.now() - startTime;
-      dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
-      delete timerStartTimes[tabID];
+      // Only resume for the currently active tab; drop all others.
+      if (numericTabId !== activeTabId) {
+        delete timerStartTimes[tabID];
+        clearTimeout(timers[tabID]);
+        delete timers[tabID];
+        continue;
+      }
 
-      const remainingMs = timeLimit * MS_IN_MINUTE - dailyTimeSpent[hostname];
-      if (remainingMs > 0) {
-        setTimerForTab(tabID, hostname, remainingMs / MS_IN_MINUTE);
-        console.log(
-          `Restored daily timer for ${hostname} on tabId: ${tabID}, ${(remainingMs / MS_IN_MINUTE).toFixed(2)} minutes remaining`
-        );
+      if (settings.dailyTimeLimit) {
+        // Fold the elapsed segment for the active tab (it was being viewed).
+        const elapsed = Date.now() - startTime;
+        dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
+        delete timerStartTimes[tabID];
+
+        const remainingMs = timeLimit * MS_IN_MINUTE - dailyTimeSpent[hostname];
+        if (remainingMs > 0) {
+          setTimerForTab(tabID, hostname, remainingMs / MS_IN_MINUTE);
+          console.log(
+            `Restored daily timer for ${hostname} on tabId: ${tabID}, ${(remainingMs / MS_IN_MINUTE).toFixed(2)} minutes remaining`
+          );
+        } else {
+          redirectTabToTimeExceeded(tabID);
+        }
       } else {
-        redirectTabToTimeExceeded(tabID);
-      }
-    } else {
-      const result = resumeOrExpireTimer(tabID, hostname, timeLimit, startTime);
-      if (result.resumed) {
-        console.log(
-          `Restored timer for ${hostname} on tabId: ${tabID}, ${result.remaining.toFixed(2)} minutes remaining`
-        );
+        const result = resumeOrExpireTimer(tabID, hostname, timeLimit, startTime);
+        if (result.resumed) {
+          console.log(
+            `Restored timer for ${hostname} on tabId: ${tabID}, ${result.remaining.toFixed(2)} minutes remaining`
+          );
+        }
       }
     }
+    updateStorage();
+    isRestored = true;
+  })();
+
+  try {
+    await restorePromise;
+  } catch (error) {
+    restorePromise = null;
+    throw error;
   }
-  updateStorage();
 }
 
 function handleHostname(hostname: string, tabID: number): void {
@@ -304,8 +329,8 @@ function handleHostname(hostname: string, tabID: number): void {
 
   if (timeLimits[hostname]) {
     if (settings.dailyTimeLimit) {
-      // All-day mode: only start timer when no timer is already running for this tab
-      if (!timers[tabID]) {
+      // All-day mode: only start timer when this tab is not already tracking this hostname.
+      if (!timerStartTimes[tabID] || timerStartTimes[tabID].hostname !== hostname) {
         const spentMs = dailyTimeSpent[hostname] || 0;
         const remainingMs = timeLimits[hostname] * MS_IN_MINUTE - spentMs;
         if (remainingMs <= 0) {
@@ -444,7 +469,7 @@ chrome.tabs.onUpdated.addListener(
     try {
       if (!changeInfo.url) return;
 
-      await initializeFromStorage();
+      await restoreTimers();
 
       const hostname = extractHostname(changeInfo.url);
       console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
@@ -465,7 +490,7 @@ chrome.tabs.onUpdated.addListener(
 
 chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo) => {
   try {
-    await initializeFromStorage();
+    await restoreTimers();
 
     // Daily mode: pause the timer on the tab we're switching away from
     if (
@@ -493,17 +518,26 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
 });
 
 chrome.tabs.onRemoved.addListener((tabId: number) => {
-  // Clean up any timer running on the closed tab.
-  // In daily mode, pauseTimerForTab folds the elapsed segment into the
-  // budget first (the user was spending time before closing). In per-visit
-  // mode it just clears the orphaned timer without redirecting a gone tab.
-  pauseTimerForTab(tabId);
-  delete lastHandle[tabId];
+  removedTabIds.add(tabId);
+  void (async () => {
+    try {
+      await initializeFromStorage();
+      pauseTimerForTab(tabId);
+      delete lastHandle[tabId];
+      if (currentActiveTabId === tabId) {
+        currentActiveTabId = null;
+      }
+    } catch (error) {
+      console.log("Can't handle in onRemoved:", error);
+    } finally {
+      removedTabIds.delete(tabId);
+    }
+  })();
 });
 
 chrome.windows.onFocusChanged.addListener(async (windowId: number) => {
   try {
-    await initializeFromStorage();
+    await restoreTimers();
 
     // Per-visit mode tracks time while the tab is open regardless of focus.
     if (!settings.dailyTimeLimit) return;
@@ -544,7 +578,7 @@ chrome.runtime.onMessage.addListener(
   ) => {
     (async () => {
       try {
-        await initializeFromStorage();
+        await restoreTimers();
         let hostnameToApply: string | null = null;
 
         switch (request.type) {
@@ -722,7 +756,6 @@ chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
 
 async function main(): Promise<void> {
   try {
-    await initializeFromStorage();
     await restoreTimers();
     await setupDailyResetAlarm();
   } catch (error) {
