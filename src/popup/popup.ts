@@ -110,6 +110,20 @@ function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"'/]/g, (m) => {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+    };
+    return map[m];
+  });
+}
+
 function renderTimeLeft(items: TimeLeftItem[]): void {
   const content = document.getElementById('timeLeftContent');
   if (!content) return;
@@ -138,7 +152,7 @@ function renderTimeLeft(items: TimeLeftItem[]): void {
     const exhausted = item.remainingMs <= 0;
 
     html += `
-      <div class="time-left-card" data-hostname="${item.hostname}">
+      <div class="time-left-card" data-hostname="${escapeHtml(item.hostname)}">
         <div class="time-left-card-header">
           <div class="time-left-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -146,8 +160,7 @@ function renderTimeLeft(items: TimeLeftItem[]): void {
               <path d="M12 6v6l4 2"/>
             </svg>
           </div>
-          <div class="time-left-hostname">${item.hostname}</div>
-          <div class="time-left-status ${item.isActive ? 'active' : ''}">${item.isActive ? '● Active' : ''}</div>
+          <div class="time-left-hostname">${escapeHtml(item.hostname)}</div>
         </div>
         <div class="time-left-row">
           <div class="time-left-label">

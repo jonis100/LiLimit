@@ -209,6 +209,7 @@ function pauseTimerForTab(tabID: string | number): void {
   }
   clearTimeout(timers[tabID]);
   delete timers[tabID];
+  delete timerStartTimes[tabID];
   updateStorage();
 }
 
@@ -513,17 +514,21 @@ chrome.windows.onFocusChanged.addListener(async (windowId: number) => {
         pauseTimerForTab(currentActiveTabId);
       }
     } else {
-      // Chrome regained focus — resume the active tab's timer if limited.
-      if (currentActiveTabId !== null) {
-        try {
-          const tab = await chrome.tabs.get(currentActiveTabId);
-          if (tab && tab.url && tab.id) {
-            const hostname = extractHostname(tab.url);
-            handleHostname(hostname, tab.id);
+      // Chrome regained focus — track the active tab of the newly focused
+      // window (which may differ from currentActiveTabId when switching
+      // between windows). Pause the previously active tab first.
+      try {
+        const [activeTab] = await chrome.tabs.query({ active: true, windowId });
+        if (activeTab && activeTab.id && activeTab.url) {
+          if (currentActiveTabId !== null && currentActiveTabId !== activeTab.id) {
+            pauseTimerForTab(currentActiveTabId);
           }
-        } catch {
-          currentActiveTabId = null;
+          currentActiveTabId = activeTab.id;
+          const hostname = extractHostname(activeTab.url);
+          handleHostname(hostname, activeTab.id);
         }
+      } catch (err) {
+        console.log('Error updating active tab on focus regain:', err);
       }
     }
   } catch (error) {
