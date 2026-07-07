@@ -6,6 +6,8 @@ import type {
   LimitsResponse,
   DeLimitResponse,
   SettingsResponse,
+  TimeLeftItem,
+  TimeLeftResponse,
 } from '../shared/types.js';
 
 function initTabs(): void {
@@ -27,7 +29,9 @@ function initTabs(): void {
         targetElement.classList.add('active');
       }
 
-      if (targetTab === 'stats') {
+      if (targetTab === 'time-left') {
+        loadTimeLeft();
+      } else if (targetTab === 'stats') {
         loadStats();
       } else if (targetTab === 'all-limits') {
         loadAllLimits();
@@ -89,6 +93,107 @@ if (form) {
     timeLimitInput.value = '';
     visitLimitInput.value = '';
   });
+}
+
+function formatDuration(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
+function renderTimeLeft(items: TimeLeftItem[]): void {
+  const content = document.getElementById('timeLeftContent');
+  if (!content) return;
+
+  if (items.length === 0) {
+    content.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <p>No time budgets set yet</p>
+      </div>
+    `;
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) => a.remainingMs - b.remainingMs);
+
+  let html = '';
+  sorted.forEach((item) => {
+    const budgetMs = item.timeLimit * 60000;
+    const spentPercent = budgetMs > 0 ? Math.min(100, (item.spentMs / budgetMs) * 100) : 0;
+    const remainingPercent = 100 - spentPercent;
+    const barColor = remainingPercent <= 0 ? 'danger' : remainingPercent <= 34 ? 'warning' : 'success';
+    const exhausted = item.remainingMs <= 0;
+
+    html += `
+      <div class="time-left-card" data-hostname="${item.hostname}">
+        <div class="time-left-card-header">
+          <div class="time-left-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <div class="time-left-hostname">${item.hostname}</div>
+          <div class="time-left-status ${item.isActive ? 'active' : ''}">${item.isActive ? '● Active' : ''}</div>
+        </div>
+        <div class="time-left-row">
+          <div class="time-left-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <span>Time left</span>
+          </div>
+          <div class="time-left-value ${exhausted ? 'exhausted' : ''}">${exhausted ? 'Exhausted' : formatDuration(item.remainingMs)}</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill ${barColor}" style="width: ${remainingPercent}%"></div>
+        </div>
+        <div class="time-left-progress-label">
+          <span>${formatDuration(item.spentMs)} used</span>
+          <span>${item.timeLimit} min budget</span>
+        </div>
+      </div>
+    `;
+  });
+
+  content.innerHTML = html;
+}
+
+async function loadTimeLeft(): Promise<void> {
+  const content = document.getElementById('timeLeftContent');
+  if (!content) return;
+
+  content.innerHTML = '<div class="loading">Loading time left...</div>';
+
+  try {
+    const response = (await chrome.runtime.sendMessage({
+      type: 'getTimeLeft',
+    })) as TimeLeftResponse;
+
+    if (!response || !response.timeLeft) {
+      renderTimeLeft([]);
+      return;
+    }
+
+    renderTimeLeft(response.timeLeft);
+  } catch (error) {
+    console.error('Error loading time left:', error);
+    content.innerHTML = '<div class="error-state">Failed to load time left</div>';
+  }
 }
 
 async function loadStats(): Promise<void> {
@@ -358,6 +463,17 @@ if (refreshStatsBtn) {
     const btn = refreshStatsBtn;
     btn.classList.add('spinning');
     loadStats().finally(() => {
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+    });
+  });
+}
+
+const refreshTimeLeftBtn = document.getElementById('refreshTimeLeft');
+if (refreshTimeLeftBtn) {
+  refreshTimeLeftBtn.addEventListener('click', () => {
+    const btn = refreshTimeLeftBtn;
+    btn.classList.add('spinning');
+    loadTimeLeft().finally(() => {
       setTimeout(() => btn.classList.remove('spinning'), 500);
     });
   });
@@ -641,6 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportStats();
   initLogoEasterEgg();
   startTipRotation();
+  loadTimeLeft();
 
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {

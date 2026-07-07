@@ -65,6 +65,14 @@ interface LimitItem {
   visitLimit?: number;
 }
 
+interface TimeLeftItem {
+  hostname: string;
+  timeLimit: number;
+  remainingMs: number;
+  spentMs: number;
+  isActive: boolean;
+}
+
 const visitCounts: VisitCounts = {};
 const timeLimits: Limits = {};
 const visitLimits: Limits = {};
@@ -191,8 +199,40 @@ function resumeOrExpireTimer(
   }
 }
 
+function pauseTimerForTab(tabID: string | number): void {
+  if (!timerStartTimes[tabID]) return;
+  const { hostname, startTime } = timerStartTimes[tabID];
+  if (settings.dailyTimeLimit) {
+    const elapsed = Date.now() - startTime;
+    dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
+    console.log(`Paused timer for ${hostname} on tab ${tabID}, accumulated ${elapsed}ms`);
+  }
+  clearTimeout(timers[tabID]);
+  delete timers[tabID];
+  updateStorage();
+}
+
 async function restoreTimers(): Promise<void> {
   await initializeFromStorage();
+
+  // Determine the currently active tab so we only resume timers that
+  // should actually be running. Stored segments for non-active tabs are
+  // stale — the tab was likely not being viewed when the service worker
+  // was killed. Dropping them without folding elapsed avoids the rogue
+  // full-budget over-count that previously reset users' daily time.
+  let activeTabId: number | null = null;
+  try {
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (activeTab && activeTab.id) {
+      activeTabId = activeTab.id;
+    }
+  } catch (error) {
+    console.log('Could not query active tab during restore:', error);
+  }
+  currentActiveTabId = activeTabId;
 
   for (const tabID in timerStartTimes) {
     const timerData = timerStartTimes[tabID];
@@ -202,11 +242,21 @@ async function restoreTimers(): Promise<void> {
 
     if (timeLimit === undefined) {
       delete timerStartTimes[tabID];
+      clearTimeout(timers[tabID]);
+      delete timers[tabID];
+      continue;
+    }
+
+    // Only resume for the currently active tab; drop all others.
+    if (Number(tabID) !== activeTabId) {
+      delete timerStartTimes[tabID];
+      clearTimeout(timers[tabID]);
+      delete timers[tabID];
       continue;
     }
 
     if (settings.dailyTimeLimit) {
-      // Accumulate elapsed time from the interrupted session segment
+      // Fold the elapsed segment for the active tab (it was being viewed).
       const elapsed = Date.now() - startTime;
       dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
       delete timerStartTimes[tabID];
@@ -313,6 +363,50 @@ function getAllLimitedHostnames(): Set<string> {
   return new Set([...Object.keys(timeLimits), ...Object.keys(visitLimits)]);
 }
 
+function computeTimeLeft(): TimeLeftItem[] {
+  const items: TimeLeftItem[] = [];
+  const now = Date.now();
+
+  for (const hostname of Object.keys(timeLimits)) {
+    const timeLimit = timeLimits[hostname];
+    if (timeLimit === undefined) continue;
+
+    const budgetMs = timeLimit * MS_IN_MINUTE;
+
+    // Elapsed time on any tab currently running a timer for this hostname.
+    // The running segment is not yet folded into dailyTimeSpent, so add it live.
+    let liveElapsedMs = 0;
+    let isActive = false;
+    for (const tabID in timerStartTimes) {
+      if (timerStartTimes[tabID].hostname === hostname) {
+        isActive = true;
+        liveElapsedMs = Math.max(liveElapsedMs, now - timerStartTimes[tabID].startTime);
+      }
+    }
+
+    let spentMs: number;
+    if (settings.dailyTimeLimit) {
+      // Daily budget accumulates across visits; add the live running segment.
+      spentMs = (dailyTimeSpent[hostname] || 0) + liveElapsedMs;
+    } else {
+      // Per-visit mode: budget is per session, so only the current session counts.
+      spentMs = liveElapsedMs;
+    }
+
+    const remainingMs = Math.max(0, budgetMs - spentMs);
+
+    items.push({
+      hostname,
+      timeLimit,
+      remainingMs,
+      spentMs: Math.min(spentMs, budgetMs),
+      isActive,
+    });
+  }
+
+  return items;
+}
+
 function updateStorage(): void {
   try {
     chrome.storage.local.set(
@@ -354,19 +448,11 @@ chrome.tabs.onUpdated.addListener(
       const hostname = extractHostname(changeInfo.url);
       console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 
-      if (timers[tabId] && lastHandle[tabId] && lastHandle[tabId] !== hostname) {
-        if (settings.dailyTimeLimit && timerStartTimes[tabId]) {
-          const elapsed = Date.now() - timerStartTimes[tabId].startTime;
-          dailyTimeSpent[timerStartTimes[tabId].hostname] =
-            (dailyTimeSpent[timerStartTimes[tabId].hostname] || 0) + elapsed;
-        }
-        clearTimeout(timers[tabId]);
-        delete timers[tabId];
-        delete timerStartTimes[tabId];
+      if (timerStartTimes[tabId] && lastHandle[tabId] && lastHandle[tabId] !== hostname) {
+        pauseTimerForTab(tabId);
         console.log(
           `Cleared timer on tabId: ${tabId}, hostname changed from ${lastHandle[tabId]} to ${hostname}`
         );
-        updateStorage();
       }
 
       handleHostname(hostname, tabId);
@@ -380,25 +466,13 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
   try {
     await initializeFromStorage();
 
-    // All-day mode: pause the timer on the tab we're switching away from
+    // Daily mode: pause the timer on the tab we're switching away from
     if (
       settings.dailyTimeLimit &&
       currentActiveTabId !== null &&
       currentActiveTabId !== activeInfo.tabId
     ) {
-      const prevTabId = currentActiveTabId;
-      if (timerStartTimes[prevTabId]) {
-        const { hostname, startTime } = timerStartTimes[prevTabId];
-        const elapsed = Date.now() - startTime;
-        dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
-        clearTimeout(timers[prevTabId]);
-        delete timers[prevTabId];
-        delete timerStartTimes[prevTabId];
-        console.log(
-          `Paused daily timer for ${hostname} on tab ${prevTabId}, accumulated ${elapsed}ms`
-        );
-        updateStorage();
-      }
+      pauseTimerForTab(currentActiveTabId);
     }
 
     currentActiveTabId = activeInfo.tabId;
@@ -414,6 +488,46 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
     });
   } catch (error) {
     console.log("Can't handle in onActivated:", error);
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId: number) => {
+  // Clean up any timer running on the closed tab.
+  // In daily mode, pauseTimerForTab folds the elapsed segment into the
+  // budget first (the user was spending time before closing). In per-visit
+  // mode it just clears the orphaned timer without redirecting a gone tab.
+  pauseTimerForTab(tabId);
+  delete lastHandle[tabId];
+});
+
+chrome.windows.onFocusChanged.addListener(async (windowId: number) => {
+  try {
+    await initializeFromStorage();
+
+    // Per-visit mode tracks time while the tab is open regardless of focus.
+    if (!settings.dailyTimeLimit) return;
+
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      // Chrome lost focus — pause the active tab's timer.
+      if (currentActiveTabId !== null) {
+        pauseTimerForTab(currentActiveTabId);
+      }
+    } else {
+      // Chrome regained focus — resume the active tab's timer if limited.
+      if (currentActiveTabId !== null) {
+        try {
+          const tab = await chrome.tabs.get(currentActiveTabId);
+          if (tab && tab.url && tab.id) {
+            const hostname = extractHostname(tab.url);
+            handleHostname(hostname, tab.id);
+          }
+        } catch {
+          currentActiveTabId = null;
+        }
+      }
+    }
+  } catch (error) {
+    console.log("Can't handle onFocusChanged:", error);
   }
 });
 
@@ -532,6 +646,12 @@ chrome.runtime.onMessage.addListener(
             });
 
             sendResponse({ limits });
+            break;
+          }
+
+          case 'getTimeLeft': {
+            console.log('getTimeLeft called');
+            sendResponse({ timeLeft: computeTimeLeft() });
             break;
           }
         }
