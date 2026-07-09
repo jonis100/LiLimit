@@ -42,6 +42,7 @@ interface StorageData {
   timerStartTimes?: TimerStartTimes;
   dailyTimeSpent?: DailyTimeSpent;
   settings?: Settings;
+  lastDailyResetDate?: string;
 }
 
 interface MessageRequest {
@@ -83,6 +84,43 @@ const dailyTimeSpent: DailyTimeSpent = {};
 const settings: Settings = { ...DEFAULT_SETTINGS };
 
 const DAILY_RESET_ALARM = 'dailyResetAlarm';
+let lastDailyResetDate: string | undefined;
+
+function getLocalDateKey(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function clearRecord<T>(record: { [key: string]: T }): void {
+  for (const member in record) delete record[member];
+}
+
+function clearDailyResetState(resetDate: string): void {
+  clearRecord(visitCounts);
+  clearRecord(dailyTimeSpent);
+  for (const tabID in timers) {
+    clearTimeout(timers[tabID]);
+    delete timers[tabID];
+  }
+  clearRecord(timerStartTimes);
+  clearRecord(lastHandle);
+  lastDailyResetDate = resetDate;
+}
+
+function syncDailyResetDate(): boolean {
+  const today = getLocalDateKey();
+  if (!lastDailyResetDate) {
+    lastDailyResetDate = today;
+    return true;
+  }
+  if (lastDailyResetDate !== today) {
+    clearDailyResetState(today);
+    return true;
+  }
+  return false;
+}
 const MS_IN_MINUTE = 60000;
 
 let currentActiveTabId: number | null = null;
@@ -100,7 +138,15 @@ async function initializeFromStorage(): Promise<void> {
 
   initializationPromise = new Promise((resolve, reject) => {
     chrome.storage.local.get(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'dailyTimeSpent', 'settings'],
+      [
+        'timeLimits',
+        'visitLimits',
+        'visitCounts',
+        'timerStartTimes',
+        'dailyTimeSpent',
+        'settings',
+        'lastDailyResetDate',
+      ],
       (result: StorageData) => {
         if (chrome.runtime.lastError) {
           console.error('Error loading data from storage:', chrome.runtime.lastError);
@@ -118,12 +164,15 @@ async function initializeFromStorage(): Promise<void> {
             Object.assign(timerStartTimes, result.timerStartTimes);
           if (result && result.dailyTimeSpent) Object.assign(dailyTimeSpent, result.dailyTimeSpent);
           if (result && result.settings) Object.assign(settings, result.settings);
+          if (result && result.lastDailyResetDate) lastDailyResetDate = result.lastDailyResetDate;
+          const didSyncDailyResetDate = syncDailyResetDate();
           console.log('Loaded persisted data from storage:', {
             timeLimits,
             visitLimits,
             visitCounts,
             timerStartTimes,
           });
+          if (didSyncDailyResetDate) updateStorage();
           isInitialized = true;
           resolve();
         } catch (e) {
@@ -443,6 +492,7 @@ function updateStorage(): void {
         visitCounts: visitCounts,
         timerStartTimes: timerStartTimes,
         dailyTimeSpent: dailyTimeSpent,
+        lastDailyResetDate: lastDailyResetDate,
       },
       () => {
         if (chrome.runtime.lastError) {
@@ -455,6 +505,7 @@ function updateStorage(): void {
             visitCounts,
             timerStartTimes,
             dailyTimeSpent,
+            lastDailyResetDate,
           });
         }
       }
@@ -734,14 +785,7 @@ chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
     try {
       console.log('Daily reset triggered at', new Date().toLocaleString());
 
-      for (const member in visitCounts) delete visitCounts[member];
-      for (const member in dailyTimeSpent) delete dailyTimeSpent[member];
-      for (const tabID in timers) {
-        clearTimeout(timers[tabID]);
-        delete timers[tabID];
-      }
-      for (const member in timerStartTimes) delete timerStartTimes[member];
-      for (const tabID in lastHandle) delete lastHandle[tabID];
+      clearDailyResetState(getLocalDateKey());
 
       updateStorage();
       console.log('Visit counts, timers, and timer data reset for new day');

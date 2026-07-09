@@ -17,6 +17,7 @@ interface MockStorageData {
   timerStartTimes?: Record<string, { hostname: string; startTime: number }>;
   dailyTimeSpent?: Record<string, number>;
   settings?: MockSettings;
+  lastDailyResetDate?: string;
 }
 
 interface MockTab {
@@ -42,6 +43,8 @@ type TabsOnUpdatedListener = (
 ) => void | Promise<void>;
 
 type TabsOnActivatedListener = (activeInfo: { tabId: number }) => void | Promise<void>;
+type TabsOnRemovedListener = (tabId: number) => void | Promise<void>;
+type WindowsOnFocusChangedListener = (windowId: number) => void | Promise<void>;
 
 type AlarmListener = (alarm: MockAlarm) => void | Promise<void>;
 
@@ -66,9 +69,16 @@ declare const global: typeof globalThis & {
       onActivated: {
         addListener: jest.MockedFunction<(listener: TabsOnActivatedListener) => void>;
       };
+      onRemoved: { addListener: jest.MockedFunction<(listener: TabsOnRemovedListener) => void> };
       update: typeof mockTabsUpdate;
       get: typeof mockTabsGet;
       query: typeof mockTabsQuery;
+    };
+    windows: {
+      WINDOW_ID_NONE: number;
+      onFocusChanged: {
+        addListener: jest.MockedFunction<(listener: WindowsOnFocusChangedListener) => void>;
+      };
     };
     runtime: {
       onMessage: { addListener: jest.MockedFunction<(listener: MessageListener) => void> };
@@ -93,9 +103,14 @@ Object.defineProperty(global, 'chrome', {
     tabs: {
       onUpdated: { addListener: jest.fn() },
       onActivated: { addListener: jest.fn() },
+      onRemoved: { addListener: jest.fn() },
       update: mockTabsUpdate,
       get: mockTabsGet,
       query: mockTabsQuery,
+    },
+    windows: {
+      WINDOW_ID_NONE: -1,
+      onFocusChanged: { addListener: jest.fn() },
     },
     runtime: {
       onMessage: { addListener: jest.fn() },
@@ -137,7 +152,15 @@ describe('Background Script', () => {
     alarmListener = global.chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
     expect(global.chrome.storage.local.get).toHaveBeenCalledWith(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'dailyTimeSpent', 'settings'],
+      [
+        'timeLimits',
+        'visitLimits',
+        'visitCounts',
+        'timerStartTimes',
+        'dailyTimeSpent',
+        'settings',
+        'lastDailyResetDate',
+      ],
       expect.any(Function)
     );
   });
@@ -187,6 +210,7 @@ describe('Background Script', () => {
           'timerStartTimes',
           'dailyTimeSpent',
           'settings',
+          'lastDailyResetDate',
         ],
         expect.any(Function)
       );
@@ -525,9 +549,7 @@ describe('Background Script', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const logMessages = consoleSpy.mock.calls.map((call) => call.join(' '));
-      expect(logMessages.some((msg) => msg.includes(`Paused daily timer for ${hostname}`))).toBe(
-        true
-      );
+      expect(logMessages.some((msg) => msg.includes(`Paused timer for ${hostname}`))).toBe(true);
 
       consoleSpy.mockRestore();
 
@@ -608,6 +630,54 @@ describe('Background Script', () => {
       ).toBe(true);
 
       consoleSpy.mockRestore();
+    });
+
+    test('should refresh daily time budgets at midnight before exhaustion', async () => {
+      const hostname = `dailyrefresh${Date.now()}.com`;
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, jest.fn());
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 30 }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const tabId = args[0] as number;
+        const callback = args[1] as (tab: MockTab) => void;
+        callback(
+          tabId === 300
+            ? { id: 300, url: `https://${hostname}`, pendingUrl: undefined }
+            : { id: tabId, url: 'https://other.com', pendingUrl: undefined }
+        );
+      });
+      await onActivatedListener({ tabId: 300 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await onActivatedListener({ tabId: 301 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const currentDate = new Date();
+      const currentDateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+
+      mockStorageSet.mockClear();
+      await alarmListener({ name: 'dailyResetAlarm' });
+
+      const resetPayload = mockStorageSet.mock.calls.find((call) => {
+        const payload = call[0] as MockStorageData;
+        return payload.lastDailyResetDate === currentDateKey;
+      })?.[0] as MockStorageData | undefined;
+
+      expect(resetPayload?.dailyTimeSpent?.[hostname]).toBeUndefined();
+
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getTimeLeft' }, {}, sendResponse);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse.mock.calls[0][0] as {
+        timeLeft: Array<{ hostname: string; remainingMs: number; spentMs: number }>;
+      };
+      const timeLeft = response.timeLeft.find((item) => item.hostname === hostname);
+
+      expect(timeLeft).toMatchObject({ remainingMs: 30 * 60000, spentMs: 0 });
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     test('should ignore non-reset alarms', async () => {
