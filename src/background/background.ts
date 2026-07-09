@@ -602,6 +602,9 @@ chrome.runtime.onMessage.addListener(
               timeLimits[hostname] = t;
               updateStorage();
               hostnameToApply = hostname;
+              sendResponse({ success: true });
+            } else {
+              sendResponse({ success: false });
             }
             break;
           }

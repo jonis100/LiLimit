@@ -59,6 +59,7 @@ describe('LiLimit Popup', () => {
     await import(`../src/popup/popup.ts?t=${Date.now()}`);
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
+    mockChrome.runtime.sendMessage.mockClear();
   });
 
   afterEach(() => {
@@ -167,12 +168,14 @@ describe('LiLimit Popup', () => {
   });
 
   describe('Tab Switching', () => {
-    test('should initialize with Set Limits tab active', () => {
+    test('should initialize with Time Left tab active', () => {
+      const timeLeftTab = document.getElementById('time-left') as HTMLElement;
       const setLimitsTab = document.getElementById('set-limits') as HTMLElement;
       const statsTab = document.getElementById('stats') as HTMLElement;
       const allLimitsTab = document.getElementById('all-limits') as HTMLElement;
 
-      expect(setLimitsTab.classList.contains('active')).toBe(true);
+      expect(timeLeftTab.classList.contains('active')).toBe(true);
+      expect(setLimitsTab.classList.contains('active')).toBe(false);
       expect(statsTab.classList.contains('active')).toBe(false);
       expect(allLimitsTab.classList.contains('active')).toBe(false);
     });
@@ -330,9 +333,44 @@ describe('LiLimit Popup', () => {
       await Promise.resolve();
 
       const limitsContent = document.getElementById('limitsContent') as HTMLElement;
+      const timeLimitInput = limitsContent.querySelector('.limit-time-input') as HTMLInputElement;
       expect(limitsContent.innerHTML).toContain('example.com');
-      expect(limitsContent.innerHTML).toContain('30 minutes per visit');
+      expect(timeLimitInput.value).toBe('30');
+      expect(limitsContent.innerHTML).toContain('minutes per visit');
       expect(limitsContent.innerHTML).toContain('5 visits per day');
+    });
+
+    test('should update a time limit from the all limits card', async () => {
+      const allLimitsButton = document.querySelector(
+        '[data-tab="all-limits"]'
+      ) as HTMLButtonElement;
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        limits: [{ hostname: 'example.com', timeLimit: 30, visitLimit: 5 }],
+      });
+
+      allLimitsButton.click();
+      await Promise.resolve();
+
+      mockChrome.runtime.sendMessage.mockClear();
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+
+      const timeLimitInput = document.querySelector('.limit-time-input') as HTMLInputElement;
+      const saveButton = document.querySelector('.save-limit-btn') as HTMLButtonElement;
+
+      timeLimitInput.value = '45';
+      saveButton.click();
+
+      await Promise.resolve();
+
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'setTimeLimit',
+        hostname: 'example.com',
+        timeLimit: 45,
+      });
+      expect((document.querySelector('.limit-time-input') as HTMLInputElement).value).toBe('45');
+      expect(document.getElementById('message')?.textContent).toBe(
+        'Time limit updated for example.com'
+      );
     });
 
     test('should display multiple limit cards', async () => {

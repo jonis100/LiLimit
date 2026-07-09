@@ -345,6 +345,7 @@ interface LimitsManager {
   setLimits: (limits: LimitItem[]) => void;
   getLimits: () => LimitItem[];
   removeLimitByHostname: (hostname: string) => void;
+  updateTimeLimit: (hostname: string, timeLimit: number) => void;
 }
 
 const createLimitsManager = (): LimitsManager => {
@@ -357,6 +358,11 @@ const createLimitsManager = (): LimitsManager => {
     getLimits: () => currentLimits,
     removeLimitByHostname: (hostname: string) => {
       currentLimits = currentLimits.filter((l) => l.hostname !== hostname);
+    },
+    updateTimeLimit: (hostname: string, timeLimit: number) => {
+      currentLimits = currentLimits.map((limit) =>
+        limit.hostname === hostname ? { ...limit, timeLimit } : limit
+      );
     },
   };
 };
@@ -386,35 +392,37 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
 
   let limitsHTML = '';
   filtered.forEach((limit) => {
+    const escapedHostname = escapeHtml(limit.hostname);
+    const escapedTimeLimit = limit.timeLimit ? escapeHtml(String(limit.timeLimit)) : '';
+
     limitsHTML += `
-      <div class="limit-card" data-hostname="${limit.hostname}">
+      <div class="limit-card" data-hostname="${escapedHostname}">
         <div class="limit-header">
           <div class="limit-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
             </svg>
           </div>
-          <div class="limit-hostname">${limit.hostname}</div>
-          <button class="delete-limit-btn icon-btn" data-hostname="${limit.hostname}" aria-label="Delete limit">
+          <div class="limit-hostname">${escapedHostname}</div>
+          <button class="delete-limit-btn icon-btn" data-hostname="${escapedHostname}" aria-label="Delete limit">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
             </svg>
           </button>
         </div>
         <div class="limit-details">
-          ${
-            limit.timeLimit
-              ? `
-          <div class="limit-detail">
+          <div class="limit-detail limit-edit-row">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 6v6l4 2"/>
             </svg>
-            <span>${limit.timeLimit} minutes per visit</span>
+            <label class="limit-edit-label">
+              <span class="sr-only">Time limit for ${escapedHostname}</span>
+              <input class="limit-time-input" type="number" min="1" value="${escapedTimeLimit}" placeholder="No limit" aria-label="Time limit for ${escapedHostname} in minutes" />
+            </label>
+            <span class="limit-edit-unit">minutes per visit</span>
+            <button class="save-limit-btn" type="button" data-hostname="${escapedHostname}">Save</button>
           </div>
-          `
-              : ''
-          }
           ${
             limit.visitLimit
               ? `
@@ -434,6 +442,43 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
   });
 
   limitsContent.innerHTML = limitsHTML;
+
+  document.querySelectorAll<HTMLButtonElement>('.save-limit-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const hostname = btn.getAttribute('data-hostname');
+      const limitCard = btn.closest('.limit-card');
+      const timeLimitInput = limitCard?.querySelector<HTMLInputElement>('.limit-time-input');
+      if (!hostname || !timeLimitInput) return;
+
+      const timeLimit = Number(timeLimitInput.value);
+      if (!Number.isFinite(timeLimit) || timeLimit <= 0) {
+        showMessage('Enter a time limit greater than 0 minutes', 5000, true);
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const response = (await chrome.runtime.sendMessage({
+          type: 'setTimeLimit',
+          hostname,
+          timeLimit,
+        })) as DeLimitResponse;
+        if (!response?.success) {
+          btn.disabled = false;
+          showMessage(`Failed to update time limit for ${hostname}`, 5000, true);
+          return;
+        }
+        limitsManager.updateTimeLimit(hostname, timeLimit);
+        renderLimits(limitsManager.getLimits(), searchInput?.value ?? '');
+        showMessage(`Time limit updated for ${hostname}`);
+
+      } catch (error) {
+        console.error('Error updating time limit:', error);
+        btn.disabled = false;
+        showMessage(`Failed to update time limit for ${hostname}`, 5000, true);
+      }
+    });
+  });
 
   document.querySelectorAll<HTMLButtonElement>('.delete-limit-btn').forEach((btn) => {
     btn.addEventListener('click', async (e: Event) => {

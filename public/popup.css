@@ -586,6 +586,18 @@ input[type='number']:focus::-webkit-outer-spin-button {
   transform: translateX(-1px);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .limit-details {
   display: flex;
   flex-direction: column;
@@ -608,6 +620,55 @@ input[type='number']:focus::-webkit-outer-spin-button {
   color: var(--accent);
   opacity: 0.7;
   flex-shrink: 0;
+}
+
+.limit-edit-row {
+  gap: 6px;
+}
+
+.limit-edit-label {
+  flex: 0 0 58px;
+}
+
+.limit-time-input {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+.limit-time-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(110, 231, 183, 0.1);
+}
+
+.limit-edit-unit {
+  flex: 1;
+}
+
+.save-limit-btn {
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  background: rgba(110, 231, 183, 0.1);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-limit-btn:hover {
+  background: rgba(110, 231, 183, 0.18);
+}
+
+.save-limit-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .delete-limit-btn {
