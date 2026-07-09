@@ -6,6 +6,8 @@ import type {
   LimitsResponse,
   DeLimitResponse,
   SettingsResponse,
+  TimeLeftItem,
+  TimeLeftResponse,
 } from '../shared/types.js';
 
 function initTabs(): void {
@@ -27,7 +29,9 @@ function initTabs(): void {
         targetElement.classList.add('active');
       }
 
-      if (targetTab === 'stats') {
+      if (targetTab === 'time-left') {
+        loadTimeLeft();
+      } else if (targetTab === 'stats') {
         loadStats();
       } else if (targetTab === 'all-limits') {
         loadAllLimits();
@@ -89,6 +93,120 @@ if (form) {
     timeLimitInput.value = '';
     visitLimitInput.value = '';
   });
+}
+
+function formatDuration(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"'/]/g, (m) => {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+    };
+    return map[m];
+  });
+}
+
+function renderTimeLeft(items: TimeLeftItem[]): void {
+  const content = document.getElementById('timeLeftContent');
+  if (!content) return;
+
+  if (items.length === 0) {
+    content.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <p>No time budgets set yet</p>
+      </div>
+    `;
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) => a.remainingMs - b.remainingMs);
+
+  let html = '';
+  sorted.forEach((item) => {
+    const budgetMs = item.timeLimit * 60000;
+    const spentPercent = budgetMs > 0 ? Math.min(100, (item.spentMs / budgetMs) * 100) : 0;
+    const remainingPercent = 100 - spentPercent;
+    const barColor = remainingPercent <= 0 ? 'danger' : remainingPercent <= 34 ? 'warning' : 'success';
+    const exhausted = item.remainingMs <= 0;
+
+    html += `
+      <div class="time-left-card" data-hostname="${escapeHtml(item.hostname)}">
+        <div class="time-left-card-header">
+          <div class="time-left-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <div class="time-left-hostname">${escapeHtml(item.hostname)}</div>
+        </div>
+        <div class="time-left-row">
+          <div class="time-left-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <span>Time left</span>
+          </div>
+          <div class="time-left-value ${exhausted ? 'exhausted' : ''}">${exhausted ? 'Exhausted' : formatDuration(item.remainingMs)}</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill ${barColor}" style="width: ${remainingPercent}%"></div>
+        </div>
+        <div class="time-left-progress-label">
+          <span>${formatDuration(item.spentMs)} used</span>
+          <span>${item.timeLimit} min budget</span>
+        </div>
+      </div>
+    `;
+  });
+
+  content.innerHTML = html;
+}
+
+async function loadTimeLeft(): Promise<void> {
+  const content = document.getElementById('timeLeftContent');
+  if (!content) return;
+
+  content.innerHTML = '<div class="loading">Loading time left...</div>';
+
+  try {
+    const response = (await chrome.runtime.sendMessage({
+      type: 'getTimeLeft',
+    })) as TimeLeftResponse;
+
+    if (!response || !response.timeLeft) {
+      renderTimeLeft([]);
+      return;
+    }
+
+    renderTimeLeft(response.timeLeft);
+  } catch (error) {
+    console.error('Error loading time left:', error);
+    content.innerHTML = '<div class="error-state">Failed to load time left</div>';
+  }
 }
 
 async function loadStats(): Promise<void> {
@@ -227,6 +345,7 @@ interface LimitsManager {
   setLimits: (limits: LimitItem[]) => void;
   getLimits: () => LimitItem[];
   removeLimitByHostname: (hostname: string) => void;
+  updateTimeLimit: (hostname: string, timeLimit: number) => void;
 }
 
 const createLimitsManager = (): LimitsManager => {
@@ -239,6 +358,11 @@ const createLimitsManager = (): LimitsManager => {
     getLimits: () => currentLimits,
     removeLimitByHostname: (hostname: string) => {
       currentLimits = currentLimits.filter((l) => l.hostname !== hostname);
+    },
+    updateTimeLimit: (hostname: string, timeLimit: number) => {
+      currentLimits = currentLimits.map((limit) =>
+        limit.hostname === hostname ? { ...limit, timeLimit } : limit
+      );
     },
   };
 };
@@ -268,35 +392,37 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
 
   let limitsHTML = '';
   filtered.forEach((limit) => {
+    const escapedHostname = escapeHtml(limit.hostname);
+    const escapedTimeLimit = limit.timeLimit ? escapeHtml(String(limit.timeLimit)) : '';
+
     limitsHTML += `
-      <div class="limit-card" data-hostname="${limit.hostname}">
+      <div class="limit-card" data-hostname="${escapedHostname}">
         <div class="limit-header">
           <div class="limit-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
             </svg>
           </div>
-          <div class="limit-hostname">${limit.hostname}</div>
-          <button class="delete-limit-btn icon-btn" data-hostname="${limit.hostname}" aria-label="Delete limit">
+          <div class="limit-hostname">${escapedHostname}</div>
+          <button class="delete-limit-btn icon-btn" data-hostname="${escapedHostname}" aria-label="Delete limit">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
             </svg>
           </button>
         </div>
         <div class="limit-details">
-          ${
-            limit.timeLimit
-              ? `
-          <div class="limit-detail">
+          <div class="limit-detail limit-edit-row">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 6v6l4 2"/>
             </svg>
-            <span>${limit.timeLimit} minutes per visit</span>
+            <label class="limit-edit-label">
+              <span class="sr-only">Time limit for ${escapedHostname}</span>
+              <input class="limit-time-input" type="number" min="1" value="${escapedTimeLimit}" placeholder="No limit" aria-label="Time limit for ${escapedHostname} in minutes" />
+            </label>
+            <span class="limit-edit-unit">minutes per visit</span>
+            <button class="save-limit-btn" type="button" data-hostname="${escapedHostname}">Save</button>
           </div>
-          `
-              : ''
-          }
           ${
             limit.visitLimit
               ? `
@@ -316,6 +442,43 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
   });
 
   limitsContent.innerHTML = limitsHTML;
+
+  document.querySelectorAll<HTMLButtonElement>('.save-limit-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const hostname = btn.getAttribute('data-hostname');
+      const limitCard = btn.closest('.limit-card');
+      const timeLimitInput = limitCard?.querySelector<HTMLInputElement>('.limit-time-input');
+      if (!hostname || !timeLimitInput) return;
+
+      const timeLimit = Number(timeLimitInput.value);
+      if (!Number.isFinite(timeLimit) || timeLimit <= 0) {
+        showMessage('Enter a time limit greater than 0 minutes', 5000, true);
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const response = (await chrome.runtime.sendMessage({
+          type: 'setTimeLimit',
+          hostname,
+          timeLimit,
+        })) as DeLimitResponse;
+        if (!response?.success) {
+          btn.disabled = false;
+          showMessage(`Failed to update time limit for ${hostname}`, 5000, true);
+          return;
+        }
+        limitsManager.updateTimeLimit(hostname, timeLimit);
+        renderLimits(limitsManager.getLimits(), searchInput?.value ?? '');
+        showMessage(`Time limit updated for ${hostname}`);
+
+      } catch (error) {
+        console.error('Error updating time limit:', error);
+        btn.disabled = false;
+        showMessage(`Failed to update time limit for ${hostname}`, 5000, true);
+      }
+    });
+  });
 
   document.querySelectorAll<HTMLButtonElement>('.delete-limit-btn').forEach((btn) => {
     btn.addEventListener('click', async (e: Event) => {
@@ -358,6 +521,17 @@ if (refreshStatsBtn) {
     const btn = refreshStatsBtn;
     btn.classList.add('spinning');
     loadStats().finally(() => {
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+    });
+  });
+}
+
+const refreshTimeLeftBtn = document.getElementById('refreshTimeLeft');
+if (refreshTimeLeftBtn) {
+  refreshTimeLeftBtn.addEventListener('click', () => {
+    const btn = refreshTimeLeftBtn;
+    btn.classList.add('spinning');
+    loadTimeLeft().finally(() => {
       setTimeout(() => btn.classList.remove('spinning'), 500);
     });
   });
@@ -641,6 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportStats();
   initLogoEasterEgg();
   startTipRotation();
+  loadTimeLeft();
 
   const settingsBtn = document.getElementById('settingsBtn');
   if (settingsBtn) {

@@ -29,12 +29,52 @@
       </header>
 
       <nav class="tabs">
-        <button class="tab-btn active" data-tab="set-limits">Set Limits</button>
+        <button class="tab-btn active" data-tab="time-left">Time Left</button>
+        <button class="tab-btn" data-tab="set-limits">Set Limits</button>
         <button class="tab-btn" data-tab="stats">Live Stats</button>
         <button class="tab-btn" data-tab="all-limits">All Limits</button>
       </nav>
 
-      <div id="set-limits" class="tab-content active">
+      <!-- Time Left Tab -->
+      <div id="time-left" class="tab-content active">
+        <div class="time-left-container">
+          <div class="time-left-header">
+            <h3 class="time-left-title">Time Left Today</h3>
+            <button id="refreshTimeLeft" class="icon-btn" aria-label="Refresh time left">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                />
+              </svg>
+            </button>
+          </div>
+          <div id="timeLeftContent" class="time-left-content">
+            <div class="empty-state">
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              <p>No time budgets set yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="set-limits" class="tab-content">
         <form id="limitsForm" class="form" autocomplete="off">
           <div class="form-header">
             <label for="hostname" class="label">Website (URL or hostname)</label>
