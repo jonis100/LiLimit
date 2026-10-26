@@ -8,10 +8,6 @@ interface Limits {
   [hostname: string]: number;
 }
 
-interface Timers {
-  [tabId: string]: NodeJS.Timeout;
-}
-
 interface LastHandle {
   [tabId: string]: string;
 }
@@ -69,13 +65,13 @@ interface LimitItem {
 const visitCounts: VisitCounts = {};
 const timeLimits: Limits = {};
 const visitLimits: Limits = {};
-const timers: Timers = {};
 const lastHandle: LastHandle = {};
 const timerStartTimes: TimerStartTimes = {};
 const dailyTimeSpent: DailyTimeSpent = {};
 const settings: Settings = { ...DEFAULT_SETTINGS };
 
 const DAILY_RESET_ALARM = 'dailyResetAlarm';
+const TAB_TIMER_ALARM_PREFIX = 'tabTimer:';
 const SESSION_MARKER = 'browserSessionStarted';
 const MS_IN_MINUTE = 60000;
 
@@ -153,30 +149,46 @@ function redirectTabToTimeExceeded(tabID: string | number): void {
     });
 }
 
+function tabTimerAlarmName(tabID: string | number): string {
+  return `${TAB_TIMER_ALARM_PREFIX}${tabID}`;
+}
+
+/**
+ * Tab timers are chrome.alarms rather than setTimeout: MV3 stops the service worker
+ * after ~30s idle, which silently drops pending timeouts, while alarms persist and
+ * wake the worker. Chrome may delay an alarm up to 30s, so expiry can be slightly late.
+ */
 function setTimerForTab(
   tabID: string | number,
   hostname: string,
   remainingMinutes: number,
   startTime: number = Date.now()
-): NodeJS.Timeout {
-  clearTimeout(timers[tabID]);
+): void {
   timerStartTimes[tabID] = {
     hostname: hostname,
     startTime: startTime,
   };
-
-  const timer = setTimeout(() => {
-    if (settings.dailyTimeLimit && timeLimits[hostname] !== undefined) {
-      dailyTimeSpent[hostname] = timeLimits[hostname] * MS_IN_MINUTE;
-    }
-    delete timers[tabID];
-    delete timerStartTimes[tabID];
-    updateStorage();
-    redirectTabToTimeExceeded(tabID);
-  }, remainingMinutes * MS_IN_MINUTE);
-  timers[tabID] = timer;
+  chrome.alarms.create(tabTimerAlarmName(tabID), {
+    when: Date.now() + remainingMinutes * MS_IN_MINUTE,
+  });
   updateStorage();
-  return timer;
+}
+
+function clearTabTimer(tabID: string | number): void {
+  delete timerStartTimes[tabID];
+  chrome.alarms.clear(tabTimerAlarmName(tabID));
+}
+
+function expireTabTimer(tabID: string): void {
+  // The timer may have been paused or cleared after the alarm was already queued.
+  if (!timerStartTimes[tabID]) return;
+  const { hostname } = timerStartTimes[tabID];
+  if (settings.dailyTimeLimit && timeLimits[hostname] !== undefined) {
+    dailyTimeSpent[hostname] = timeLimits[hostname] * MS_IN_MINUTE;
+  }
+  delete timerStartTimes[tabID];
+  updateStorage();
+  redirectTabToTimeExceeded(tabID);
 }
 
 function calculateRemainingTime(startTime: number, timeLimit: number): number {
@@ -197,8 +209,7 @@ function resumeOrExpireTimer(
     setTimerForTab(tabID, hostname, remaining, existingStartTime);
     return { resumed: true, remaining };
   } else {
-    delete timerStartTimes[tabID];
-    delete timers[tabID];
+    clearTabTimer(tabID);
     updateStorage();
     redirectTabToTimeExceeded(tabID);
     return { resumed: false, remaining };
@@ -256,11 +267,7 @@ function getLocalDateKey(date: Date = new Date()): string {
 function clearDailyState(): void {
   for (const member in visitCounts) delete visitCounts[member];
   for (const member in dailyTimeSpent) delete dailyTimeSpent[member];
-  for (const tabID in timers) {
-    clearTimeout(timers[tabID]);
-    delete timers[tabID];
-  }
-  for (const member in timerStartTimes) delete timerStartTimes[member];
+  for (const tabID in timerStartTimes) clearTabTimer(tabID);
   for (const tabID in lastHandle) delete lastHandle[tabID];
   lastResetDate = getLocalDateKey();
 }
@@ -279,7 +286,7 @@ async function doRestoreTimers(): Promise<void> {
   }
 
   if (newBrowserSession) {
-    for (const tabID in timerStartTimes) delete timerStartTimes[tabID];
+    for (const tabID in timerStartTimes) clearTabTimer(tabID);
     updateStorage();
     console.log('New browser session, dropped stale timer segments');
     return;
@@ -295,7 +302,7 @@ async function doRestoreTimers(): Promise<void> {
     const timeLimit = timeLimits[hostname];
 
     if (timeLimit === undefined) {
-      delete timerStartTimes[tabID];
+      clearTabTimer(tabID);
       continue;
     }
 
@@ -306,7 +313,7 @@ async function doRestoreTimers(): Promise<void> {
       // Accumulate elapsed time from the interrupted session segment
       const elapsed = Date.now() - startTime;
       dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
-      delete timerStartTimes[tabID];
+      clearTabTimer(tabID);
 
       // A segment on a non-active tab means the SW was woken by switching away from it.
       if (Number(tabID) !== currentActiveTabId) {
@@ -357,7 +364,7 @@ function handleHostname(hostname: string, tabID: number): void {
   if (timeLimits[hostname]) {
     if (settings.dailyTimeLimit) {
       // All-day mode: only start timer when no timer is already running for this tab
-      if (!timers[tabID]) {
+      if (!timerStartTimes[tabID]) {
         const spentMs = dailyTimeSpent[hostname] || 0;
         const remainingMs = timeLimits[hostname] * MS_IN_MINUTE - spentMs;
         if (remainingMs <= 0) {
@@ -458,15 +465,13 @@ chrome.tabs.onUpdated.addListener(
       const hostname = extractHostname(changeInfo.url);
       console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 
-      if (timers[tabId] && lastHandle[tabId] && lastHandle[tabId] !== hostname) {
-        if (settings.dailyTimeLimit && timerStartTimes[tabId]) {
+      if (timerStartTimes[tabId] && lastHandle[tabId] && lastHandle[tabId] !== hostname) {
+        if (settings.dailyTimeLimit) {
           const elapsed = Date.now() - timerStartTimes[tabId].startTime;
           dailyTimeSpent[timerStartTimes[tabId].hostname] =
             (dailyTimeSpent[timerStartTimes[tabId].hostname] || 0) + elapsed;
         }
-        clearTimeout(timers[tabId]);
-        delete timers[tabId];
-        delete timerStartTimes[tabId];
+        clearTabTimer(tabId);
         console.log(
           `Cleared timer on tabId: ${tabId}, hostname changed from ${lastHandle[tabId]} to ${hostname}`
         );
@@ -495,9 +500,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
         const { hostname, startTime } = timerStartTimes[prevTabId];
         const elapsed = Date.now() - startTime;
         dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
-        clearTimeout(timers[prevTabId]);
-        delete timers[prevTabId];
-        delete timerStartTimes[prevTabId];
+        clearTabTimer(prevTabId);
         console.log(
           `Paused daily timer for ${hostname} on tab ${prevTabId}, accumulated ${elapsed}ms`
         );
@@ -564,11 +567,7 @@ chrome.runtime.onMessage.addListener(
             delete timeLimits[hostname];
             delete visitCounts[hostname];
             for (const tabID in timerStartTimes) {
-              if (timerStartTimes[tabID].hostname === hostname) {
-                clearTimeout(timers[tabID]);
-                delete timers[tabID];
-                delete timerStartTimes[tabID];
-              }
+              if (timerStartTimes[tabID].hostname === hostname) clearTabTimer(tabID);
             }
             updateStorage();
             sendResponse({ success: true });
@@ -672,6 +671,16 @@ async function setupDailyResetAlarm(): Promise<void> {
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
+  if (alarm.name.startsWith(TAB_TIMER_ALARM_PREFIX)) {
+    try {
+      await restoreTimers();
+      expireTabTimer(alarm.name.slice(TAB_TIMER_ALARM_PREFIX.length));
+    } catch (error) {
+      console.error("Can't process tab timer alarm:", error);
+    }
+    return;
+  }
+
   if (alarm.name === DAILY_RESET_ALARM) {
     try {
       // The alarm can wake the SW; resetting before storage loads would let the load undo the reset.
