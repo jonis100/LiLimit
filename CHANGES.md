@@ -1,39 +1,14 @@
-# Changes Log 1.4.1 version
+# Changes Log 1.4.3 version
 
-## Branch: user-reject-feedback
-
-### New Features
-
-- **Logo Easter Egg:** Triple-clicking the LiLimit logo (3 clicks within 10 seconds) reveals a friendly message with feedback contact information. A subtle visual cue (cursor pointer and hover animation) hints at the logo's interactivity.
-- **Next-Tip Button:** Added an interactive button next to footer tips allowing users to manually navigate through helpful tips instead of waiting for the automatic rotation. Tips include usage hints and the feedback email address.
+## Branch: main
 
 ### Bug Fixes
 
-- **Clear form fields after setting a limit:** The hostname, time limit, and visit limit inputs are now cleared after submitting the form.
-- **Remove active timers when a limit is deleted:** Deleting a host's limit now cancels any running timers for that host, preventing stale timeouts from firing after the limit no longer exists.
+- **Daily limits now reset reliably:** Limits previously reset only if Chrome was open at midnight. A missed reset now happens the first time Chrome starts on a new day, so there's no need to remove and re-add sites. (#39)
+- **Time limits are enforced on time:** Time limits now use Chrome alarms, so a limit expires even while you stay on the same page without switching tabs or navigating. (#40)
+- **Daily time budget counts correctly:** Switching tabs pauses the daily timer again after Chrome restarts the extension in the background, and time while Chrome was closed is no longer counted against the budget. (#39)
+- **Per-visit timers no longer restart:** Returning to a tab no longer restarts its per-visit timer or counts an extra visit after the extension was restarted in the background. (#39)
 
 ---
 
-## Archived Documentation
-
-### User Feedback Strategy (Not Implemented)
-
-A comprehensive user feedback and retention strategy was designed but not implemented.
-
-**Reference:** [`docs/FEEDBACK_STRATEGY.md`](docs/FEEDBACK_STRATEGY.md) (📦 Archived)
-
-**Summary:**
-
-- Proposed intent-based feedback collection system
-- No backend, privacy-first design
-- Anonymous feedback via Google Form
-- Reinstall detection using `chrome.storage.sync`
-- Trigger points: 7-day inactivity or deleting all limits
-
-**Status:** Archived for potential future implementation
-
-**Design Principle:** _"Ask early. Ask once. Respect privacy. Learn aggressively."_
-
----
-
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-10-26
