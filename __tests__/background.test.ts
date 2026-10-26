@@ -51,6 +51,7 @@ const mockTabsUpdate = jest.fn();
 const mockTabsQuery = jest.fn() as jest.MockedFunction<() => Promise<MockTab[]>>;
 const mockTabsGet = jest.fn();
 const mockAlarmsCreate = jest.fn();
+const mockAlarmsClear = jest.fn();
 const mockRuntimeGetURL = jest.fn((path: string) => `chrome-extension://fake-id/${path}`);
 
 declare const global: typeof globalThis & {
@@ -77,6 +78,7 @@ declare const global: typeof globalThis & {
     };
     alarms: {
       create: typeof mockAlarmsCreate;
+      clear: typeof mockAlarmsClear;
       onAlarm: { addListener: jest.MockedFunction<(listener: AlarmListener) => void> };
     };
   };
@@ -104,6 +106,7 @@ Object.defineProperty(global, 'chrome', {
     },
     alarms: {
       create: mockAlarmsCreate,
+      clear: mockAlarmsClear,
       onAlarm: { addListener: jest.fn() },
     },
   },
