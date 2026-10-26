@@ -3,13 +3,24 @@
   "name": "LiLimit - Set Limits for Distracting Sites (Private & Open Source)",
   "version": "1.4.3",
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
+  "icons": {
+    "16": "images/icons/lily-16.png",
+    "32": "images/icons/lily-32.png",
+    "48": "images/icons/lily-48.png",
+    "128": "images/icons/lily-128.png"
+  },
   "permissions": ["tabs", "alarms", "storage"],
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
   },
   "action": {
-    "default_icon": "images/lily.png",
+    "default_icon": {
+      "16": "images/icons/lily-16.png",
+      "32": "images/icons/lily-32.png",
+      "48": "images/icons/lily-48.png",
+      "128": "images/icons/lily-128.png"
+    },
     "default_popup": "popup.html"
   },
   "web_accessible_resources": [
