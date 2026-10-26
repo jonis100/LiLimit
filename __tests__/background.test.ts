@@ -17,6 +17,7 @@ interface MockStorageData {
   timerStartTimes?: Record<string, { hostname: string; startTime: number }>;
   dailyTimeSpent?: Record<string, number>;
   settings?: MockSettings;
+  lastResetDate?: string;
 }
 
 interface MockTab {
@@ -42,6 +43,8 @@ type TabsOnUpdatedListener = (
 ) => void | Promise<void>;
 
 type TabsOnActivatedListener = (activeInfo: { tabId: number }) => void | Promise<void>;
+type TabsOnRemovedListener = (tabId: number) => void | Promise<void>;
+type WindowsOnFocusChangedListener = (windowId: number) => void | Promise<void>;
 
 type AlarmListener = (alarm: MockAlarm) => void | Promise<void>;
 
@@ -51,6 +54,7 @@ const mockTabsUpdate = jest.fn();
 const mockTabsQuery = jest.fn() as jest.MockedFunction<() => Promise<MockTab[]>>;
 const mockTabsGet = jest.fn();
 const mockAlarmsCreate = jest.fn();
+const mockAlarmsClear = jest.fn();
 const mockRuntimeGetURL = jest.fn((path: string) => `chrome-extension://fake-id/${path}`);
 
 declare const global: typeof globalThis & {
@@ -66,9 +70,16 @@ declare const global: typeof globalThis & {
       onActivated: {
         addListener: jest.MockedFunction<(listener: TabsOnActivatedListener) => void>;
       };
+      onRemoved: { addListener: jest.MockedFunction<(listener: TabsOnRemovedListener) => void> };
       update: typeof mockTabsUpdate;
       get: typeof mockTabsGet;
       query: typeof mockTabsQuery;
+    };
+    windows: {
+      WINDOW_ID_NONE: number;
+      onFocusChanged: {
+        addListener: jest.MockedFunction<(listener: WindowsOnFocusChangedListener) => void>;
+      };
     };
     runtime: {
       onMessage: { addListener: jest.MockedFunction<(listener: MessageListener) => void> };
@@ -77,6 +88,7 @@ declare const global: typeof globalThis & {
     };
     alarms: {
       create: typeof mockAlarmsCreate;
+      clear: typeof mockAlarmsClear;
       onAlarm: { addListener: jest.MockedFunction<(listener: AlarmListener) => void> };
     };
   };
@@ -93,9 +105,14 @@ Object.defineProperty(global, 'chrome', {
     tabs: {
       onUpdated: { addListener: jest.fn() },
       onActivated: { addListener: jest.fn() },
+      onRemoved: { addListener: jest.fn() },
       update: mockTabsUpdate,
       get: mockTabsGet,
       query: mockTabsQuery,
+    },
+    windows: {
+      WINDOW_ID_NONE: -1,
+      onFocusChanged: { addListener: jest.fn() },
     },
     runtime: {
       onMessage: { addListener: jest.fn() },
@@ -104,6 +121,7 @@ Object.defineProperty(global, 'chrome', {
     },
     alarms: {
       create: mockAlarmsCreate,
+      clear: mockAlarmsClear,
       onAlarm: { addListener: jest.fn() },
     },
   },
@@ -125,6 +143,7 @@ mockStorageGet.mockImplementation((...args: unknown[]) => {
 let messageListener: MessageListener;
 let onUpdatedListener: TabsOnUpdatedListener;
 let onActivatedListener: TabsOnActivatedListener;
+let onRemovedListener: TabsOnRemovedListener;
 let alarmListener: AlarmListener;
 
 describe('Background Script', () => {
@@ -134,6 +153,7 @@ describe('Background Script', () => {
     messageListener = global.chrome.runtime.onMessage.addListener.mock.calls[0][0];
     onUpdatedListener = global.chrome.tabs.onUpdated.addListener.mock.calls[0][0];
     onActivatedListener = global.chrome.tabs.onActivated.addListener.mock.calls[0][0];
+    onRemovedListener = global.chrome.tabs.onRemoved.addListener.mock.calls[0][0];
     alarmListener = global.chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
     expect(global.chrome.storage.local.get).toHaveBeenCalledWith(
@@ -669,6 +689,54 @@ describe('Background Script', () => {
       consoleSpy.mockRestore();
     });
 
+    test('should refresh daily time budgets at midnight before exhaustion', async () => {
+      const hostname = `dailyrefresh${Date.now()}.com`;
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, jest.fn());
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 30 }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const tabId = args[0] as number;
+        const callback = args[1] as (tab: MockTab) => void;
+        callback(
+          tabId === 300
+            ? { id: 300, url: `https://${hostname}`, pendingUrl: undefined }
+            : { id: tabId, url: 'https://other.com', pendingUrl: undefined }
+        );
+      });
+      await onActivatedListener({ tabId: 300 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await onActivatedListener({ tabId: 301 });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const currentDate = new Date();
+      const currentDateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+
+      mockStorageSet.mockClear();
+      await alarmListener({ name: 'dailyResetAlarm' });
+
+      const resetPayload = mockStorageSet.mock.calls.find((call) => {
+        const payload = call[0] as MockStorageData;
+        return payload.lastResetDate === currentDateKey;
+      })?.[0] as MockStorageData | undefined;
+
+      expect(resetPayload?.dailyTimeSpent?.[hostname]).toBeUndefined();
+
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getTimeLeft' }, {}, sendResponse);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const response = sendResponse.mock.calls[0][0] as {
+        timeLeft: Array<{ hostname: string; remainingMs: number; spentMs: number }>;
+      };
+      const timeLeft = response.timeLeft.find((item) => item.hostname === hostname);
+
+      expect(timeLeft).toMatchObject({ remainingMs: 30 * 60000, spentMs: 0 });
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
     test('should ignore non-reset alarms', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -680,6 +748,106 @@ describe('Background Script', () => {
       consoleSpy.mockRestore();
     });
   });
+  describe('Time Left', () => {
+    interface TimeLeftResponse {
+      timeLeft: Array<{ hostname: string; isActive: boolean; remainingMs: number }>;
+      dailyTimeLimit: boolean;
+    }
+
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+    async function getTimeLeft(): Promise<TimeLeftResponse> {
+      const sendResponse = jest.fn();
+      messageListener({ type: 'getTimeLeft' }, {}, sendResponse);
+      await wait();
+      return sendResponse.mock.calls[0][0] as TimeLeftResponse;
+    }
+
+    function openTab(tabId: number, hostname: string) {
+      mockTabsGet.mockImplementation((...args: unknown[]) => {
+        const id = args[0] as number;
+        const callback = args[1] as (tab: MockTab) => void;
+        callback(
+          id === tabId
+            ? { id, url: `https://${hostname}`, pendingUrl: undefined }
+            : { id, url: 'https://other.com', pendingUrl: undefined }
+        );
+      });
+    }
+
+    test('per-visit mode lists only sites with a running timer', async () => {
+      const hostname = `pervisitleft${Date.now()}.com`;
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 10 }, {}, jest.fn());
+      await wait();
+
+      let response = await getTimeLeft();
+      expect(response.dailyTimeLimit).toBe(false);
+      expect(response.timeLeft.find((item) => item.hostname === hostname)).toBeUndefined();
+
+      openTab(400, hostname);
+      await onActivatedListener({ tabId: 400 });
+      await wait();
+
+      response = await getTimeLeft();
+      const item = response.timeLeft.find((entry) => entry.hostname === hostname);
+      expect(item?.isActive).toBe(true);
+      expect(item!.remainingMs).toBeLessThanOrEqual(10 * 60000);
+
+      await onRemovedListener(400);
+    });
+
+    test('daily mode lists every limited site and stops counting once the tab closes', async () => {
+      const hostname = `dailyleft${Date.now()}.com`;
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: true } }, {}, jest.fn());
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 10 }, {}, jest.fn());
+      await wait();
+
+      let response = await getTimeLeft();
+      expect(response.dailyTimeLimit).toBe(true);
+      expect(response.timeLeft.find((item) => item.hostname === hostname)).toMatchObject({
+        isActive: false,
+        remainingMs: 10 * 60000,
+      });
+
+      openTab(401, hostname);
+      await onActivatedListener({ tabId: 401 });
+      await wait();
+      response = await getTimeLeft();
+      expect(response.timeLeft.find((item) => item.hostname === hostname)?.isActive).toBe(true);
+
+      await onRemovedListener(401);
+      response = await getTimeLeft();
+      expect(response.timeLeft.find((item) => item.hostname === hostname)?.isActive).toBe(false);
+
+      messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
+      await wait();
+    });
+
+    test('removeTimeLimit drops the time limit but keeps the visit limit', async () => {
+      const hostname = `removetime${Date.now()}.com`;
+      messageListener({ type: 'setTimeLimit', hostname, timeLimit: 10 }, {}, jest.fn());
+      messageListener({ type: 'setVisitLimit', hostname, visitLimit: 3 }, {}, jest.fn());
+      await wait();
+
+      const removeResponse = jest.fn();
+      messageListener({ type: 'removeTimeLimit', hostname }, {}, removeResponse);
+      await wait();
+      expect(removeResponse).toHaveBeenCalledWith({ success: true });
+
+      const limitsResponse = jest.fn();
+      messageListener({ type: 'getAllLimits' }, {}, limitsResponse);
+      await wait();
+      const { limits } = limitsResponse.mock.calls[0][0] as {
+        limits: Array<{ hostname: string; timeLimit?: number; visitLimit?: number }>;
+      };
+      expect(limits.find((limit) => limit.hostname === hostname)).toEqual({
+        hostname,
+        timeLimit: undefined,
+        visitLimit: 3,
+      });
+    });
+  });
+
   describe('Apply Limits to Open Tabs', () => {
     beforeEach(() => {
       mockTabsQuery.mockClear();

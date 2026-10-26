@@ -35,6 +35,8 @@ const SITE = 'distracting.com';
 let storageSet: jest.Mock<(data: unknown, cb?: () => void) => void>;
 let listeners: Record<string, Listener>;
 let tabsUpdate: jest.Mock<(tabId: number, props: { url: string }) => Promise<void>>;
+let alarmsCreate: jest.Mock<(name: string, info: { when?: number }) => void>;
+let alarmsClear: jest.Mock<(name: string) => void>;
 
 function lastSaved(): StoredData {
   const calls = storageSet.mock.calls;
@@ -54,6 +56,8 @@ async function startWorker(
   storageSet = jest.fn((_data: unknown, cb?: () => void) => cb?.());
   listeners = {};
   tabsUpdate = jest.fn(() => Promise.resolve());
+  alarmsCreate = jest.fn();
+  alarmsClear = jest.fn();
   const capture = (name: string) => ({
     addListener: (fn: Listener) => {
       listeners[name] = fn;
@@ -80,6 +84,7 @@ async function startWorker(
       tabs: {
         onUpdated: capture('onUpdated'),
         onActivated: capture('onActivated'),
+        onRemoved: capture('onRemoved'),
         update: tabsUpdate,
         get: (id: number, cb: (tab: Tab) => void) =>
           cb(tabs[id] ?? { id, url: 'https://other.com' }),
@@ -91,7 +96,8 @@ async function startWorker(
         lastError: null,
         getURL: (path: string) => `chrome-extension://id/${path}`,
       },
-      alarms: { create: jest.fn(), onAlarm: capture('onAlarm') },
+      windows: { WINDOW_ID_NONE: -1, onFocusChanged: capture('onFocusChanged') },
+      alarms: { create: alarmsCreate, clear: alarmsClear, onAlarm: capture('onAlarm') },
     },
     writable: true,
     configurable: true,
@@ -259,5 +265,79 @@ describe('Background restore after service worker restart', () => {
 
     expect(blockedTabs()).toHaveLength(0);
     expect(lastSaved().visitCounts).toEqual({ [SITE]: 1 });
+  });
+
+  describe('tab timer alarms', () => {
+    const timeExceededRedirects = () =>
+      tabsUpdate.mock.calls.filter(([, props]) => props.url.includes('time-exceeded'));
+    const dailyTimerOnTab10 = (): StoredData => ({
+      timeLimits: { [SITE]: 30 },
+      timerStartTimes: { 10: { hostname: SITE, startTime: NOW - 60_000 } },
+      dailyTimeSpent: { [SITE]: 0 },
+      settings: { dailyTimeLimit: true },
+    });
+
+    test('enforces a limit that expires while the service worker is stopped', async () => {
+      await startWorker(
+        { timeLimits: { [SITE]: 1 }, settings: { dailyTimeLimit: false } },
+        { activeTab: null, sessionAlive: true }
+      );
+      await listeners.onUpdated(5, { url: `https://${SITE}/` }, {});
+      await flush();
+
+      // An alarm, unlike setTimeout, survives the worker being stopped and wakes it.
+      expect(alarmsCreate).toHaveBeenCalledWith('tabTimer:5', { when: NOW + 60_000 });
+
+      const savedBeforeStop = lastSaved();
+      jest.setSystemTime(NOW + 61_000);
+      await startWorker(savedBeforeStop, {
+        activeTab: { id: 5, url: `https://${SITE}/` },
+        sessionAlive: true,
+      });
+      await listeners.onAlarm({ name: 'tabTimer:5' });
+      await flush();
+
+      expect(timeExceededRedirects()).toHaveLength(1);
+    });
+
+    test('clears the alarm when a daily timer is paused by switching tabs', async () => {
+      await startWorker(dailyTimerOnTab10(), {
+        activeTab: { id: 10, url: `https://${SITE}` },
+        sessionAlive: true,
+      });
+      await flush();
+      expect(alarmsCreate).toHaveBeenCalledWith('tabTimer:10', expect.any(Object));
+
+      await listeners.onActivated({ tabId: 11 });
+      await flush();
+
+      expect(alarmsClear).toHaveBeenCalledWith('tabTimer:10');
+    });
+
+    test('ignores an alarm for a timer that was already paused', async () => {
+      await startWorker(dailyTimerOnTab10(), {
+        activeTab: { id: 10, url: `https://${SITE}` },
+        sessionAlive: true,
+      });
+      await listeners.onActivated({ tabId: 11 });
+      await flush();
+
+      await listeners.onAlarm({ name: 'tabTimer:10' });
+      await flush();
+
+      expect(timeExceededRedirects()).toHaveLength(0);
+      expect(lastSaved().dailyTimeSpent?.[SITE]).toBe(60_000);
+    });
+
+    test('clears alarms left over from a previous browser session', async () => {
+      await startWorker(dailyTimerOnTab10(), {
+        activeTab: { id: 10, url: `https://${SITE}` },
+        sessionAlive: false,
+      });
+      await flush();
+
+      expect(alarmsClear).toHaveBeenCalledWith('tabTimer:10');
+      expect(alarmsCreate).not.toHaveBeenCalledWith('tabTimer:10', expect.any(Object));
+    });
   });
 });

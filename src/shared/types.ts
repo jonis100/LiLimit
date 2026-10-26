@@ -11,6 +11,19 @@ export interface LimitItem {
   visitLimit?: number;
 }
 
+export interface TimeLeftItem {
+  hostname: string;
+  timeLimit: number;
+  remainingMs: number;
+  spentMs: number;
+  isActive: boolean;
+}
+
+export interface TimeLeftResponse {
+  timeLeft: TimeLeftItem[];
+  dailyTimeLimit: boolean;
+}
+
 export interface StatsResponse {
   stats: StatItem[];
 }
@@ -35,6 +48,7 @@ export interface SettingsResponse {
 export type MessageResponse =
   | StatsResponse
   | LimitsResponse
+  | TimeLeftResponse
   | DeLimitResponse
   | SettingsResponse
   | void;
