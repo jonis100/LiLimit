@@ -84,6 +84,7 @@ async function startWorker(
       tabs: {
         onUpdated: capture('onUpdated'),
         onActivated: capture('onActivated'),
+        onRemoved: capture('onRemoved'),
         update: tabsUpdate,
         get: (id: number, cb: (tab: Tab) => void) =>
           cb(tabs[id] ?? { id, url: 'https://other.com' }),
@@ -95,6 +96,7 @@ async function startWorker(
         lastError: null,
         getURL: (path: string) => `chrome-extension://id/${path}`,
       },
+      windows: { WINDOW_ID_NONE: -1, onFocusChanged: capture('onFocusChanged') },
       alarms: { create: alarmsCreate, clear: alarmsClear, onAlarm: capture('onAlarm') },
     },
     writable: true,

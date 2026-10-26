@@ -1,4 +1,5 @@
 import { extractHostname, limits_to_string } from '../shared/utils.js';
+import type { TimeLeftItem } from '../shared/types.js';
 
 interface VisitCounts {
   [hostname: string]: number;
@@ -272,6 +273,18 @@ function clearDailyState(): void {
   lastResetDate = getLocalDateKey();
 }
 
+function pauseTimerForTab(tabID: string | number): void {
+  if (!timerStartTimes[tabID]) return;
+  const { hostname, startTime } = timerStartTimes[tabID];
+  if (settings.dailyTimeLimit) {
+    const elapsed = Date.now() - startTime;
+    dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
+    console.log(`Paused daily timer for ${hostname} on tab ${tabID}, accumulated ${elapsed}ms`);
+  }
+  clearTabTimer(tabID);
+  updateStorage();
+}
+
 async function doRestoreTimers(): Promise<void> {
   await initializeFromStorage();
   const newBrowserSession = await isNewBrowserSession();
@@ -419,8 +432,60 @@ async function applyLimitToOpenTabs(hostname: string): Promise<void> {
   }
 }
 
+/** Moves the deadline of timers already running for a hostname whose time limit changed. */
+function rescheduleTimersForHostname(hostname: string): void {
+  const limitMs = timeLimits[hostname] * MS_IN_MINUTE;
+  for (const tabID in timerStartTimes) {
+    const { hostname: timerHostname, startTime } = timerStartTimes[tabID];
+    if (timerHostname !== hostname) continue;
+    const spentMs = settings.dailyTimeLimit ? dailyTimeSpent[hostname] || 0 : 0;
+    const remainingMs = Math.max(0, limitMs - spentMs - (Date.now() - startTime));
+    setTimerForTab(tabID, hostname, remainingMs / MS_IN_MINUTE, startTime);
+  }
+}
+
 function getAllLimitedHostnames(): Set<string> {
   return new Set([...Object.keys(timeLimits), ...Object.keys(visitLimits)]);
+}
+
+/**
+ * Per-visit mode only reports sites with a running timer: a site without an open
+ * tab has no visit in progress, so showing its full budget would be misleading.
+ * Daily mode reports every limited site, folding in the segment still running.
+ */
+function computeTimeLeft(): TimeLeftItem[] {
+  const items: TimeLeftItem[] = [];
+  const now = Date.now();
+
+  for (const hostname of Object.keys(timeLimits)) {
+    const timeLimit = timeLimits[hostname];
+    const budgetMs = timeLimit * MS_IN_MINUTE;
+
+    let liveElapsedMs = 0;
+    let isActive = false;
+    for (const tabID in timerStartTimes) {
+      if (timerStartTimes[tabID].hostname === hostname) {
+        isActive = true;
+        liveElapsedMs = Math.max(liveElapsedMs, now - timerStartTimes[tabID].startTime);
+      }
+    }
+
+    if (!settings.dailyTimeLimit && !isActive) continue;
+
+    const spentMs = settings.dailyTimeLimit
+      ? (dailyTimeSpent[hostname] || 0) + liveElapsedMs
+      : liveElapsedMs;
+
+    items.push({
+      hostname,
+      timeLimit,
+      remainingMs: Math.max(0, budgetMs - spentMs),
+      spentMs: Math.min(spentMs, budgetMs),
+      isActive,
+    });
+  }
+
+  return items;
 }
 
 function updateStorage(): void {
@@ -466,16 +531,10 @@ chrome.tabs.onUpdated.addListener(
       console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
 
       if (timerStartTimes[tabId] && lastHandle[tabId] && lastHandle[tabId] !== hostname) {
-        if (settings.dailyTimeLimit) {
-          const elapsed = Date.now() - timerStartTimes[tabId].startTime;
-          dailyTimeSpent[timerStartTimes[tabId].hostname] =
-            (dailyTimeSpent[timerStartTimes[tabId].hostname] || 0) + elapsed;
-        }
-        clearTabTimer(tabId);
+        pauseTimerForTab(tabId);
         console.log(
           `Cleared timer on tabId: ${tabId}, hostname changed from ${lastHandle[tabId]} to ${hostname}`
         );
-        updateStorage();
       }
 
       handleHostname(hostname, tabId);
@@ -495,17 +554,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
       currentActiveTabId !== null &&
       currentActiveTabId !== activeInfo.tabId
     ) {
-      const prevTabId = currentActiveTabId;
-      if (timerStartTimes[prevTabId]) {
-        const { hostname, startTime } = timerStartTimes[prevTabId];
-        const elapsed = Date.now() - startTime;
-        dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
-        clearTabTimer(prevTabId);
-        console.log(
-          `Paused daily timer for ${hostname} on tab ${prevTabId}, accumulated ${elapsed}ms`
-        );
-        updateStorage();
-      }
+      pauseTimerForTab(currentActiveTabId);
     }
 
     currentActiveTabId = activeInfo.tabId;
@@ -521,6 +570,48 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
     });
   } catch (error) {
     console.log("Can't handle in onActivated:", error);
+  }
+});
+
+chrome.tabs.onRemoved.addListener(async (tabId: number) => {
+  try {
+    await restoreTimers();
+    pauseTimerForTab(tabId);
+    delete lastHandle[tabId];
+    if (currentActiveTabId === tabId) {
+      currentActiveTabId = null;
+    }
+  } catch (error) {
+    console.log("Can't handle in onRemoved:", error);
+  }
+});
+
+chrome.windows.onFocusChanged.addListener(async (windowId: number) => {
+  try {
+    await restoreTimers();
+
+    // Per-visit mode tracks time while the tab is open regardless of focus.
+    if (!settings.dailyTimeLimit) return;
+
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      // Chrome lost focus: pause the active tab's timer.
+      if (currentActiveTabId !== null) {
+        pauseTimerForTab(currentActiveTabId);
+      }
+      return;
+    }
+
+    // Chrome regained focus: track the active tab of the newly focused window,
+    // which may differ from currentActiveTabId when switching between windows.
+    const [activeTab] = await chrome.tabs.query({ active: true, windowId });
+    if (!activeTab || !activeTab.id || !activeTab.url) return;
+    if (currentActiveTabId !== null && currentActiveTabId !== activeTab.id) {
+      pauseTimerForTab(currentActiveTabId);
+    }
+    currentActiveTabId = activeTab.id;
+    handleHostname(extractHostname(activeTab.url), activeTab.id);
+  } catch (error) {
+    console.log("Can't handle in onFocusChanged:", error);
   }
 });
 
@@ -554,9 +645,27 @@ chrome.runtime.onMessage.addListener(
             const t = Number(request.timeLimit);
             if (Number.isFinite(t) && t > 0) {
               timeLimits[hostname] = t;
+              rescheduleTimersForHostname(hostname);
               updateStorage();
               hostnameToApply = hostname;
+              sendResponse({ success: true });
+            } else {
+              sendResponse({ success: false });
             }
+            break;
+          }
+
+          case 'removeTimeLimit': {
+            if (!request.hostname) break;
+            const hostname = extractHostname(request.hostname);
+            delete timeLimits[hostname];
+            for (const tabID in timerStartTimes) {
+              if (timerStartTimes[tabID].hostname === hostname) {
+                clearTabTimer(tabID);
+              }
+            }
+            updateStorage();
+            sendResponse({ success: true });
             break;
           }
 
@@ -635,6 +744,12 @@ chrome.runtime.onMessage.addListener(
             });
 
             sendResponse({ limits });
+            break;
+          }
+
+          case 'getTimeLeft': {
+            console.log('getTimeLeft called');
+            sendResponse({ timeLeft: computeTimeLeft(), dailyTimeLimit: settings.dailyTimeLimit });
             break;
           }
         }
