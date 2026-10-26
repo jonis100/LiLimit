@@ -21,6 +21,7 @@ export interface TimeLeftItem {
 
 export interface TimeLeftResponse {
   timeLeft: TimeLeftItem[];
+  dailyTimeLimit: boolean;
 }
 
 export interface StatsResponse {

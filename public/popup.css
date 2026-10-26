@@ -1076,7 +1076,6 @@ input[type='number']:focus::-webkit-outer-spin-button {
   transform: rotate(-180deg) scale(0.5);
 }
 
-
 .time-left-container {
   background: var(--card-bg);
   border-radius: var(--radius);

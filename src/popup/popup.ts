@@ -124,9 +124,12 @@ function escapeHtml(str: string): string {
   });
 }
 
-function renderTimeLeft(items: TimeLeftItem[]): void {
+function renderTimeLeft(items: TimeLeftItem[], dailyTimeLimit: boolean): void {
   const content = document.getElementById('timeLeftContent');
   if (!content) return;
+
+  const title = document.querySelector('.time-left-title');
+  if (title) title.textContent = dailyTimeLimit ? 'Time Left Today' : 'Time Left This Visit';
 
   if (items.length === 0) {
     content.innerHTML = `
@@ -135,7 +138,7 @@ function renderTimeLeft(items: TimeLeftItem[]): void {
           <circle cx="12" cy="12" r="10"/>
           <path d="M12 6v6l4 2"/>
         </svg>
-        <p>No time budgets set yet</p>
+        <p>${dailyTimeLimit ? 'No time budgets set yet' : 'No time-limited sites open right now'}</p>
       </div>
     `;
     return;
@@ -148,7 +151,8 @@ function renderTimeLeft(items: TimeLeftItem[]): void {
     const budgetMs = item.timeLimit * 60000;
     const spentPercent = budgetMs > 0 ? Math.min(100, (item.spentMs / budgetMs) * 100) : 0;
     const remainingPercent = 100 - spentPercent;
-    const barColor = remainingPercent <= 0 ? 'danger' : remainingPercent <= 34 ? 'warning' : 'success';
+    const barColor =
+      remainingPercent <= 0 ? 'danger' : remainingPercent <= 34 ? 'warning' : 'success';
     const exhausted = item.remainingMs <= 0;
 
     html += `
@@ -161,6 +165,7 @@ function renderTimeLeft(items: TimeLeftItem[]): void {
             </svg>
           </div>
           <div class="time-left-hostname">${escapeHtml(item.hostname)}</div>
+          ${item.isActive ? '<span class="time-left-status active">● Active</span>' : ''}
         </div>
         <div class="time-left-row">
           <div class="time-left-label">
@@ -198,11 +203,11 @@ async function loadTimeLeft(): Promise<void> {
     })) as TimeLeftResponse;
 
     if (!response || !response.timeLeft) {
-      renderTimeLeft([]);
+      renderTimeLeft([], false);
       return;
     }
 
-    renderTimeLeft(response.timeLeft);
+    renderTimeLeft(response.timeLeft, response.dailyTimeLimit);
   } catch (error) {
     console.error('Error loading time left:', error);
     content.innerHTML = '<div class="error-state">Failed to load time left</div>';
@@ -346,6 +351,7 @@ interface LimitsManager {
   getLimits: () => LimitItem[];
   removeLimitByHostname: (hostname: string) => void;
   updateTimeLimit: (hostname: string, timeLimit: number) => void;
+  removeTimeLimit: (hostname: string) => void;
 }
 
 const createLimitsManager = (): LimitsManager => {
@@ -363,6 +369,11 @@ const createLimitsManager = (): LimitsManager => {
       currentLimits = currentLimits.map((limit) =>
         limit.hostname === hostname ? { ...limit, timeLimit } : limit
       );
+    },
+    removeTimeLimit: (hostname: string) => {
+      currentLimits = currentLimits
+        .map((limit) => (limit.hostname === hostname ? { ...limit, timeLimit: undefined } : limit))
+        .filter((limit) => limit.timeLimit || limit.visitLimit);
     },
   };
 };
@@ -390,6 +401,9 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
     return;
   }
 
+  const dailyTimeLimitEnabled =
+    (document.getElementById('dailyTimeLimit') as HTMLInputElement | null)?.checked ?? false;
+
   let limitsHTML = '';
   filtered.forEach((limit) => {
     const escapedHostname = escapeHtml(limit.hostname);
@@ -411,6 +425,9 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
           </button>
         </div>
         <div class="limit-details">
+          ${
+            limit.timeLimit
+              ? `
           <div class="limit-detail limit-edit-row">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
@@ -420,9 +437,12 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
               <span class="sr-only">Time limit for ${escapedHostname}</span>
               <input class="limit-time-input" type="number" min="1" value="${escapedTimeLimit}" placeholder="No limit" aria-label="Time limit for ${escapedHostname} in minutes" />
             </label>
-            <span class="limit-edit-unit">minutes per visit</span>
+            <span class="limit-edit-unit">${dailyTimeLimitEnabled ? 'minutes per day' : 'minutes per visit'}</span>
             <button class="save-limit-btn" type="button" data-hostname="${escapedHostname}">Save</button>
           </div>
+          `
+              : ''
+          }
           ${
             limit.visitLimit
               ? `
@@ -450,28 +470,39 @@ function renderLimits(limits: LimitItem[], filterText: string = ''): void {
       const timeLimitInput = limitCard?.querySelector<HTMLInputElement>('.limit-time-input');
       if (!hostname || !timeLimitInput) return;
 
-      const timeLimit = Number(timeLimitInput.value);
-      if (!Number.isFinite(timeLimit) || timeLimit <= 0) {
-        showMessage('Enter a time limit greater than 0 minutes', 5000, true);
+      const rawValue = timeLimitInput.value.trim();
+      const removing = rawValue === '';
+      const timeLimit = Number(rawValue);
+      if (!removing && (!Number.isFinite(timeLimit) || timeLimit <= 0)) {
+        showMessage(
+          'Enter a time limit greater than 0 minutes, or clear the field to remove it',
+          5000,
+          true
+        );
         return;
       }
 
       btn.disabled = true;
       try {
-        const response = (await chrome.runtime.sendMessage({
-          type: 'setTimeLimit',
-          hostname,
-          timeLimit,
-        })) as DeLimitResponse;
+        const response = (await chrome.runtime.sendMessage(
+          removing
+            ? { type: 'removeTimeLimit', hostname }
+            : { type: 'setTimeLimit', hostname, timeLimit }
+        )) as DeLimitResponse;
         if (!response?.success) {
           btn.disabled = false;
           showMessage(`Failed to update time limit for ${hostname}`, 5000, true);
           return;
         }
-        limitsManager.updateTimeLimit(hostname, timeLimit);
+        if (removing) {
+          limitsManager.removeTimeLimit(hostname);
+        } else {
+          limitsManager.updateTimeLimit(hostname, timeLimit);
+        }
         renderLimits(limitsManager.getLimits(), searchInput?.value ?? '');
-        showMessage(`Time limit updated for ${hostname}`);
-
+        showMessage(
+          removing ? `Time limit removed for ${hostname}` : `Time limit updated for ${hostname}`
+        );
       } catch (error) {
         console.error('Error updating time limit:', error);
         btn.disabled = false;

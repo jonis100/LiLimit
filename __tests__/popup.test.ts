@@ -20,6 +20,8 @@ interface MockChrome {
   };
 }
 
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 describe('LiLimit Popup', () => {
   let mockChrome: MockChrome;
 
@@ -164,6 +166,54 @@ describe('LiLimit Popup', () => {
       });
 
       expect(global.alert).toHaveBeenCalled();
+    });
+  });
+
+  describe('Time Left', () => {
+    const item = { hostname: 'example.com', timeLimit: 10, remainingMs: 300000, spentMs: 300000 };
+
+    async function openTimeLeft(response: MessageResponse): Promise<HTMLElement> {
+      mockChrome.runtime.sendMessage.mockResolvedValue(response);
+      (document.querySelector('[data-tab="time-left"]') as HTMLButtonElement).click();
+      await flushPromises();
+      return document.getElementById('timeLeftContent') as HTMLElement;
+    }
+
+    test('should show the active badge only for sites with a running timer', async () => {
+      const content = await openTimeLeft({
+        timeLeft: [
+          { ...item, isActive: true },
+          { ...item, hostname: 'idle.com', isActive: false },
+        ],
+        dailyTimeLimit: true,
+      });
+
+      const cards = content.querySelectorAll('.time-left-card');
+      expect(cards).toHaveLength(2);
+      const active = Array.from(cards).filter((card) =>
+        card.querySelector('.time-left-status.active')
+      );
+      expect(active.map((card) => card.getAttribute('data-hostname'))).toEqual(['example.com']);
+    });
+
+    test('should title the tab by budget mode', async () => {
+      const title = document.querySelector('.time-left-title') as HTMLElement;
+
+      await openTimeLeft({ timeLeft: [{ ...item, isActive: true }], dailyTimeLimit: true });
+      expect(title.textContent).toBe('Time Left Today');
+
+      await openTimeLeft({ timeLeft: [{ ...item, isActive: true }], dailyTimeLimit: false });
+      expect(title.textContent).toBe('Time Left This Visit');
+    });
+
+    test('should escape hostnames before rendering them', async () => {
+      const content = await openTimeLeft({
+        timeLeft: [{ ...item, hostname: '<img src=x onerror=alert(1)>', isActive: false }],
+        dailyTimeLimit: true,
+      });
+
+      expect(content.querySelector('img')).toBeNull();
+      expect(content.textContent).toContain('<img src=x onerror=alert(1)>');
     });
   });
 
@@ -371,6 +421,53 @@ describe('LiLimit Popup', () => {
       expect(document.getElementById('message')?.textContent).toBe(
         'Time limit updated for example.com'
       );
+    });
+
+    test('should only offer time limit editing for sites that have a time limit', async () => {
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        limits: [{ hostname: 'visitsonly.com', visitLimit: 5 }],
+      });
+
+      (document.querySelector('[data-tab="all-limits"]') as HTMLButtonElement).click();
+      await flushPromises();
+
+      expect(document.getElementById('limitsContent')?.innerHTML).toContain('visitsonly.com');
+      expect(document.querySelector('.limit-time-input')).toBeNull();
+    });
+
+    test('should label the edit row per day when the daily budget mode is on', async () => {
+      (document.getElementById('dailyTimeLimit') as HTMLInputElement).checked = true;
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        limits: [{ hostname: 'example.com', timeLimit: 30 }],
+      });
+
+      (document.querySelector('[data-tab="all-limits"]') as HTMLButtonElement).click();
+      await flushPromises();
+
+      expect(document.querySelector('.limit-edit-unit')?.textContent).toBe('minutes per day');
+    });
+
+    test('should remove only the time limit when the field is cleared', async () => {
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        limits: [{ hostname: 'example.com', timeLimit: 30, visitLimit: 5 }],
+      });
+      (document.querySelector('[data-tab="all-limits"]') as HTMLButtonElement).click();
+      await flushPromises();
+
+      mockChrome.runtime.sendMessage.mockClear();
+      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
+      (document.querySelector('.limit-time-input') as HTMLInputElement).value = '';
+      (document.querySelector('.save-limit-btn') as HTMLButtonElement).click();
+      await flushPromises();
+
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'removeTimeLimit',
+        hostname: 'example.com',
+      });
+      const content = document.getElementById('limitsContent')?.innerHTML ?? '';
+      expect(content).toContain('example.com');
+      expect(content).toContain('5 visits per day');
+      expect(document.querySelector('.limit-time-input')).toBeNull();
     });
 
     test('should display multiple limit cards', async () => {
