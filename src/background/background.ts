@@ -42,6 +42,7 @@ interface StorageData {
   timerStartTimes?: TimerStartTimes;
   dailyTimeSpent?: DailyTimeSpent;
   settings?: Settings;
+  lastResetDate?: string;
 }
 
 interface MessageRequest {
@@ -75,12 +76,15 @@ const dailyTimeSpent: DailyTimeSpent = {};
 const settings: Settings = { ...DEFAULT_SETTINGS };
 
 const DAILY_RESET_ALARM = 'dailyResetAlarm';
+const SESSION_MARKER = 'browserSessionStarted';
 const MS_IN_MINUTE = 60000;
 
 let currentActiveTabId: number | null = null;
+let lastResetDate: string | undefined;
 
 let isInitialized: boolean = false;
 let initializationPromise: Promise<void> | null = null;
+let restorePromise: Promise<void> | null = null;
 
 async function initializeFromStorage(): Promise<void> {
   if (isInitialized) return;
@@ -88,7 +92,15 @@ async function initializeFromStorage(): Promise<void> {
 
   initializationPromise = new Promise((resolve, reject) => {
     chrome.storage.local.get(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'dailyTimeSpent', 'settings'],
+      [
+        'timeLimits',
+        'visitLimits',
+        'visitCounts',
+        'timerStartTimes',
+        'dailyTimeSpent',
+        'settings',
+        'lastResetDate',
+      ],
       (result: StorageData) => {
         if (chrome.runtime.lastError) {
           console.error('Error loading data from storage:', chrome.runtime.lastError);
@@ -106,6 +118,7 @@ async function initializeFromStorage(): Promise<void> {
             Object.assign(timerStartTimes, result.timerStartTimes);
           if (result && result.dailyTimeSpent) Object.assign(dailyTimeSpent, result.dailyTimeSpent);
           if (result && result.settings) Object.assign(settings, result.settings);
+          if (result && result.lastResetDate) lastResetDate = result.lastResetDate;
           console.log('Loaded persisted data from storage:', {
             timeLimits,
             visitLimits,
@@ -146,6 +159,7 @@ function setTimerForTab(
   remainingMinutes: number,
   startTime: number = Date.now()
 ): NodeJS.Timeout {
+  clearTimeout(timers[tabID]);
   timerStartTimes[tabID] = {
     hostname: hostname,
     startTime: startTime,
@@ -191,8 +205,88 @@ function resumeOrExpireTimer(
   }
 }
 
-async function restoreTimers(): Promise<void> {
+/**
+ * chrome.storage.session is cleared on browser restart and extension update/reload,
+ * but survives service worker restarts. A missing marker means stored tab IDs and
+ * start times belong to a previous session and must not be trusted.
+ */
+async function isNewBrowserSession(): Promise<boolean> {
+  try {
+    const result = await chrome.storage.session.get(SESSION_MARKER);
+    if (result[SESSION_MARKER]) return false;
+    await chrome.storage.session.set({ [SESSION_MARKER]: true });
+    return true;
+  } catch (error) {
+    console.log('Could not read session marker:', error);
+    return false;
+  }
+}
+
+async function getActiveTabId(): Promise<number | null> {
+  try {
+    const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    return activeTab?.id ?? null;
+  } catch (error) {
+    console.log('Could not query active tab during restore:', error);
+    return null;
+  }
+}
+
+/**
+ * Rebuilds in-memory timer state after the MV3 service worker is restarted.
+ * Memoized so tab/message events arriving during wake-up wait for it instead of
+ * racing it. Safe to await from every listener.
+ */
+function restoreTimers(): Promise<void> {
+  if (!restorePromise) {
+    restorePromise = doRestoreTimers().catch((error) => {
+      restorePromise = null;
+      throw error;
+    });
+  }
+  return restorePromise;
+}
+
+function getLocalDateKey(date: Date = new Date()): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function clearDailyState(): void {
+  for (const member in visitCounts) delete visitCounts[member];
+  for (const member in dailyTimeSpent) delete dailyTimeSpent[member];
+  for (const tabID in timers) {
+    clearTimeout(timers[tabID]);
+    delete timers[tabID];
+  }
+  for (const member in timerStartTimes) delete timerStartTimes[member];
+  for (const tabID in lastHandle) delete lastHandle[tabID];
+  lastResetDate = getLocalDateKey();
+}
+
+async function doRestoreTimers(): Promise<void> {
   await initializeFromStorage();
+  const newBrowserSession = await isNewBrowserSession();
+
+  // The midnight alarm is missed whenever Chrome isn't running at midnight, and
+  // setupDailyResetAlarm then reschedules it to the next midnight. Catch up here.
+  if (lastResetDate !== getLocalDateKey()) {
+    clearDailyState();
+    updateStorage();
+    console.log('Missed daily reset, reset visit counts and timers on startup');
+    return;
+  }
+
+  if (newBrowserSession) {
+    for (const tabID in timerStartTimes) delete timerStartTimes[tabID];
+    updateStorage();
+    console.log('New browser session, dropped stale timer segments');
+    return;
+  }
+
+  // Without this, onActivated never pauses the tab we switch away from after a restart.
+  currentActiveTabId = await getActiveTabId();
 
   for (const tabID in timerStartTimes) {
     const timerData = timerStartTimes[tabID];
@@ -205,11 +299,20 @@ async function restoreTimers(): Promise<void> {
       continue;
     }
 
+    // Prevents handleHostname from treating the tab as a fresh visit and restarting its timer.
+    lastHandle[tabID] = hostname;
+
     if (settings.dailyTimeLimit) {
       // Accumulate elapsed time from the interrupted session segment
       const elapsed = Date.now() - startTime;
       dailyTimeSpent[hostname] = (dailyTimeSpent[hostname] || 0) + elapsed;
       delete timerStartTimes[tabID];
+
+      // A segment on a non-active tab means the SW was woken by switching away from it.
+      if (Number(tabID) !== currentActiveTabId) {
+        console.log(`Paused daily timer for ${hostname} on tab ${tabID}, accumulated ${elapsed}ms`);
+        continue;
+      }
 
       const remainingMs = timeLimit * MS_IN_MINUTE - dailyTimeSpent[hostname];
       if (remainingMs > 0) {
@@ -323,6 +426,7 @@ function updateStorage(): void {
         visitCounts: visitCounts,
         timerStartTimes: timerStartTimes,
         dailyTimeSpent: dailyTimeSpent,
+        lastResetDate: lastResetDate,
       },
       () => {
         if (chrome.runtime.lastError) {
@@ -349,7 +453,7 @@ chrome.tabs.onUpdated.addListener(
     try {
       if (!changeInfo.url) return;
 
-      await initializeFromStorage();
+      await restoreTimers();
 
       const hostname = extractHostname(changeInfo.url);
       console.log(`Tab with id: ${tabId} was updated. New url: ${changeInfo.url}`);
@@ -378,7 +482,7 @@ chrome.tabs.onUpdated.addListener(
 
 chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo) => {
   try {
-    await initializeFromStorage();
+    await restoreTimers();
 
     // All-day mode: pause the timer on the tab we're switching away from
     if (
@@ -425,7 +529,7 @@ chrome.runtime.onMessage.addListener(
   ) => {
     (async () => {
       try {
-        await initializeFromStorage();
+        await restoreTimers();
         let hostnameToApply: string | null = null;
 
         switch (request.type) {
@@ -570,17 +674,11 @@ async function setupDailyResetAlarm(): Promise<void> {
 chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
   if (alarm.name === DAILY_RESET_ALARM) {
     try {
+      // The alarm can wake the SW; resetting before storage loads would let the load undo the reset.
+      await restoreTimers();
       console.log('Daily reset triggered at', new Date().toLocaleString());
 
-      for (const member in visitCounts) delete visitCounts[member];
-      for (const member in dailyTimeSpent) delete dailyTimeSpent[member];
-      for (const tabID in timers) {
-        clearTimeout(timers[tabID]);
-        delete timers[tabID];
-      }
-      for (const member in timerStartTimes) delete timerStartTimes[member];
-      for (const tabID in lastHandle) delete lastHandle[tabID];
-
+      clearDailyState();
       updateStorage();
       console.log('Visit counts, timers, and timer data reset for new day');
 
@@ -597,7 +695,6 @@ chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
 
 async function main(): Promise<void> {
   try {
-    await initializeFromStorage();
     await restoreTimers();
     await setupDailyResetAlarm();
   } catch (error) {

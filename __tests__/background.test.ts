@@ -137,7 +137,15 @@ describe('Background Script', () => {
     alarmListener = global.chrome.alarms.onAlarm.addListener.mock.calls[0][0];
 
     expect(global.chrome.storage.local.get).toHaveBeenCalledWith(
-      ['timeLimits', 'visitLimits', 'visitCounts', 'timerStartTimes', 'dailyTimeSpent', 'settings'],
+      [
+        'timeLimits',
+        'visitLimits',
+        'visitCounts',
+        'timerStartTimes',
+        'dailyTimeSpent',
+        'settings',
+        'lastResetDate',
+      ],
       expect.any(Function)
     );
   });
@@ -187,6 +195,7 @@ describe('Background Script', () => {
           'timerStartTimes',
           'dailyTimeSpent',
           'settings',
+          'lastResetDate',
         ],
         expect.any(Function)
       );
