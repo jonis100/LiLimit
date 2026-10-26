@@ -335,10 +335,10 @@ async function doRestoreTimers(): Promise<void> {
   updateStorage();
 }
 
-function handleHostname(hostname: string, tabID: number): void {
+function handleHostname(hostname: string, tabID: number, skipCount = false): void {
   console.log('Handling: ', hostname);
 
-  if (visitLimits[hostname] && lastHandle[tabID] != hostname) {
+  if (!skipCount && visitLimits[hostname]) {
     visitCounts[hostname] = (visitCounts[hostname] || 0) + 1;
     console.log(
       `Visit count for ${hostname} is now ${visitCounts[hostname]} (limit: ${visitLimits[hostname]})`
@@ -401,7 +401,7 @@ async function applyLimitToOpenTabs(hostname: string): Promise<void> {
         const tabHostname = extractHostname(tab.url);
         if (tabHostname === hostname && lastHandle[tab.id] !== hostname) {
           console.log(`Found open tab for ${hostname}, applying limits to tab ${tab.id}`);
-          handleHostname(hostname, tab.id);
+          handleHostname(hostname, tab.id, false);
         }
       } catch (error) {
         console.log(`Error processing tab ${tab.id}:`, error);
@@ -472,8 +472,8 @@ chrome.tabs.onUpdated.addListener(
         );
         updateStorage();
       }
-
-      handleHostname(hostname, tabId);
+      const isNavigation = lastHandle[tabId] !== hostname;
+      handleHostname(hostname, tabId, !isNavigation);
     } catch (error) {
       console.log(`Can't handle in onUpdated: ${error} for ${changeInfo.url}`);
     }
@@ -511,7 +511,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
       if (tab && typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
         const hostname = extractHostname(tab.url);
         console.log('tab switched hostname extractHostname: ', hostname, 'call handleHostname..');
-        handleHostname(hostname, tab.id);
+        handleHostname(hostname, tab.id, true);
       } else {
         console.log('new tab from onActivated');
       }
