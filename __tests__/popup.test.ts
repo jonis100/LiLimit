@@ -166,6 +166,33 @@ describe('LiLimit Popup', () => {
     });
   });
 
+  describe('Settings Toggles', () => {
+    test('should load tabSwitchCountsAsVisit when opening settings', async () => {
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        settings: { dailyTimeLimit: false, tabSwitchCountsAsVisit: true },
+      });
+
+      (document.getElementById('settingsBtn') as HTMLButtonElement).click();
+      await Promise.resolve();
+
+      const toggle = document.getElementById('tabSwitchCountsAsVisit') as HTMLInputElement;
+      expect(toggle.checked).toBe(true);
+    });
+
+    test('should save tabSwitchCountsAsVisit when its row is clicked', () => {
+      const toggle = document.getElementById('tabSwitchCountsAsVisit') as HTMLInputElement;
+      toggle.checked = false;
+
+      (document.getElementById('tabSwitchCountsAsVisitRow') as HTMLElement).click();
+
+      expect(toggle.checked).toBe(true);
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'setSettings',
+        settings: { tabSwitchCountsAsVisit: true },
+      });
+    });
+  });
+
   describe('Tab Switching', () => {
     test('should initialize with Set Limits tab active', () => {
       const setLimitsTab = document.getElementById('set-limits') as HTMLElement;

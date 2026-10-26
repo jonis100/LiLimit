@@ -543,6 +543,56 @@ describe('Background Script', () => {
       messageListener({ type: 'setSettings', settings: { dailyTimeLimit: false } }, {}, jest.fn());
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
+
+    describe('tabSwitchCountsAsVisit setting', () => {
+      const visitCountAfterSwitchingBack = async (hostname: string): Promise<number> => {
+        messageListener({ type: 'setVisitLimit', hostname, visitLimit: 10 }, {}, jest.fn());
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        mockTabsGet.mockImplementation((...args: unknown[]) => {
+          const tabId = args[0] as number;
+          const callback = args[1] as (tab: MockTab) => void;
+          callback(
+            tabId === 300
+              ? { id: 300, url: `https://${hostname}`, pendingUrl: undefined }
+              : { id: tabId, url: 'https://other.com', pendingUrl: undefined }
+          );
+        });
+
+        await onUpdatedListener(300, { url: `https://${hostname}` }, {} as MockTab);
+        await onActivatedListener({ tabId: 301 });
+        await onActivatedListener({ tabId: 300 });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const sendResponse = jest.fn();
+        messageListener({ type: 'getStats' }, {}, sendResponse);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const { stats } = sendResponse.mock.calls[0][0] as StatsResponse;
+        return stats.find((s: StatItem) => s.hostname === hostname)!.visitCount;
+      };
+
+      test('should not count switching back to a tab as a visit by default', async () => {
+        expect(await visitCountAfterSwitchingBack(`tabswitchoff${Date.now()}.com`)).toBe(1);
+      });
+
+      test('should count switching back to a tab as a visit when enabled', async () => {
+        messageListener(
+          { type: 'setSettings', settings: { tabSwitchCountsAsVisit: true } },
+          {},
+          jest.fn()
+        );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(await visitCountAfterSwitchingBack(`tabswitchon${Date.now()}.com`)).toBe(2);
+
+        messageListener(
+          { type: 'setSettings', settings: { tabSwitchCountsAsVisit: false } },
+          {},
+          jest.fn()
+        );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    });
   });
 
   describe('Message Handling - Settings', () => {
@@ -571,7 +621,7 @@ describe('Background Script', () => {
 
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
       expect(mockStorageSet).toHaveBeenCalledWith(
-        expect.objectContaining({ settings: { dailyTimeLimit: true } }),
+        expect.objectContaining({ settings: expect.objectContaining({ dailyTimeLimit: true }) }),
         expect.any(Function)
       );
 
@@ -599,7 +649,7 @@ describe('Background Script', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockStorageSet).toHaveBeenCalledWith(
-        expect.objectContaining({ settings: { dailyTimeLimit: false } }),
+        expect.objectContaining({ settings: expect.objectContaining({ dailyTimeLimit: false }) }),
         expect.any(Function)
       );
     });

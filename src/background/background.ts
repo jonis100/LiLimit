@@ -27,9 +27,10 @@ interface TimerStartTimes {
 
 interface Settings {
   dailyTimeLimit: boolean;
+  tabSwitchCountsAsVisit: boolean;
 }
 
-const DEFAULT_SETTINGS: Settings = { dailyTimeLimit: false };
+const DEFAULT_SETTINGS: Settings = { dailyTimeLimit: false, tabSwitchCountsAsVisit: false };
 
 interface DailyTimeSpent {
   [hostname: string]: number;
@@ -401,7 +402,7 @@ async function applyLimitToOpenTabs(hostname: string): Promise<void> {
         const tabHostname = extractHostname(tab.url);
         if (tabHostname === hostname && lastHandle[tab.id] !== hostname) {
           console.log(`Found open tab for ${hostname}, applying limits to tab ${tab.id}`);
-          handleHostname(hostname, tab.id, false);
+          handleHostname(hostname, tab.id);
         }
       } catch (error) {
         console.log(`Error processing tab ${tab.id}:`, error);
@@ -511,7 +512,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
       if (tab && typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
         const hostname = extractHostname(tab.url);
         console.log('tab switched hostname extractHostname: ', hostname, 'call handleHostname..');
-        handleHostname(hostname, tab.id, true);
+        handleHostname(hostname, tab.id, !settings.tabSwitchCountsAsVisit);
       } else {
         console.log('new tab from onActivated');
       }
