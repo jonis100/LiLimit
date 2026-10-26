@@ -193,6 +193,9 @@ describe('LiLimit Popup', () => {
         type: 'setSettings',
         settings: { tabSwitchCountsAsVisit: true },
       });
+    });
+  });
+
   describe('Time Left', () => {
     const item = { hostname: 'example.com', timeLimit: 10, remainingMs: 300000, spentMs: 300000 };
 
