@@ -24,9 +24,10 @@ interface TimerStartTimes {
 
 interface Settings {
   dailyTimeLimit: boolean;
+  tabSwitchCountsAsVisit: boolean;
 }
 
-const DEFAULT_SETTINGS: Settings = { dailyTimeLimit: false };
+const DEFAULT_SETTINGS: Settings = { dailyTimeLimit: false, tabSwitchCountsAsVisit: false };
 
 interface DailyTimeSpent {
   [hostname: string]: number;
@@ -355,10 +356,10 @@ async function doRestoreTimers(): Promise<void> {
   updateStorage();
 }
 
-function handleHostname(hostname: string, tabID: number): void {
+function handleHostname(hostname: string, tabID: number, skipCount = false): void {
   console.log('Handling: ', hostname);
 
-  if (visitLimits[hostname] && lastHandle[tabID] != hostname) {
+  if (!skipCount && visitLimits[hostname]) {
     visitCounts[hostname] = (visitCounts[hostname] || 0) + 1;
     console.log(
       `Visit count for ${hostname} is now ${visitCounts[hostname]} (limit: ${visitLimits[hostname]})`
@@ -536,8 +537,8 @@ chrome.tabs.onUpdated.addListener(
           `Cleared timer on tabId: ${tabId}, hostname changed from ${lastHandle[tabId]} to ${hostname}`
         );
       }
-
-      handleHostname(hostname, tabId);
+      const isNavigation = lastHandle[tabId] !== hostname;
+      handleHostname(hostname, tabId, !isNavigation);
     } catch (error) {
       console.log(`Can't handle in onUpdated: ${error} for ${changeInfo.url}`);
     }
@@ -563,7 +564,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo: chrome.tabs.TabActiveInfo
       if (tab && typeof tab.pendingUrl == 'undefined' && tab.url && tab.id) {
         const hostname = extractHostname(tab.url);
         console.log('tab switched hostname extractHostname: ', hostname, 'call handleHostname..');
-        handleHostname(hostname, tab.id);
+        handleHostname(hostname, tab.id, !settings.tabSwitchCountsAsVisit);
       } else {
         console.log('new tab from onActivated');
       }

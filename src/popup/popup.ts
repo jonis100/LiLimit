@@ -5,6 +5,7 @@ import type {
   StatsResponse,
   LimitsResponse,
   DeLimitResponse,
+  Settings,
   SettingsResponse,
   TimeLeftItem,
   TimeLeftResponse,
@@ -311,10 +312,30 @@ async function loadStats(): Promise<void> {
 
 async function loadSettings(): Promise<void> {
   const response = (await chrome.runtime.sendMessage({ type: 'getSettings' })) as SettingsResponse;
-  const toggle = document.getElementById('dailyTimeLimit') as HTMLInputElement;
-  if (toggle && response?.settings) {
-    toggle.checked = response.settings.dailyTimeLimit;
+  if (!response?.settings) return;
+  for (const key of ['dailyTimeLimit', 'tabSwitchCountsAsVisit'] as const) {
+    const toggle = document.getElementById(key) as HTMLInputElement | null;
+    if (toggle) toggle.checked = Boolean(response.settings[key]);
   }
+}
+
+/** Wires a settings row so clicking it or pressing Enter/Space flips the toggle and saves it. */
+function initSettingToggle(key: keyof Settings): void {
+  const toggle = document.getElementById(key) as HTMLInputElement | null;
+  const row = document.getElementById(`${key}Row`);
+  if (!toggle || !row) return;
+
+  const flipAndSave = () => {
+    toggle.checked = !toggle.checked;
+    chrome.runtime.sendMessage({ type: 'setSettings', settings: { [key]: toggle.checked } });
+  };
+  row.addEventListener('click', flipAndSave);
+  row.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      flipAndSave();
+    }
+  });
 }
 
 async function loadAllLimits(): Promise<void> {
@@ -875,29 +896,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const dailyTimeLimitToggle = document.getElementById('dailyTimeLimit') as HTMLInputElement;
-  const dailyTimeLimitRow = document.getElementById('dailyTimeLimitRow');
-  if (dailyTimeLimitToggle && dailyTimeLimitRow) {
-    const sendDailyTimeLimitSetting = () => {
-      chrome.runtime.sendMessage({
-        type: 'setSettings',
-        settings: { dailyTimeLimit: dailyTimeLimitToggle.checked },
-      });
-    };
-    // TODO: Refactor to avoid duplicate code for click and keydown handlers.
-    // In this case setSettings set twice, not efficient but not a bug.
-    dailyTimeLimitRow.addEventListener('click', () => {
-      dailyTimeLimitToggle.checked = !dailyTimeLimitToggle.checked;
-      sendDailyTimeLimitSetting();
-    });
-    dailyTimeLimitRow.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        dailyTimeLimitToggle.checked = !dailyTimeLimitToggle.checked;
-        sendDailyTimeLimitSetting();
-      }
-    });
-  }
+  initSettingToggle('dailyTimeLimit');
+  initSettingToggle('tabSwitchCountsAsVisit');
 
   const nextTipBtn = document.getElementById('nextTipBtn');
   if (nextTipBtn) {

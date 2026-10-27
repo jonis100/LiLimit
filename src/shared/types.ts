@@ -38,6 +38,7 @@ export interface DeLimitResponse {
 
 export interface Settings {
   dailyTimeLimit: boolean;
+  tabSwitchCountsAsVisit: boolean;
 }
 
 export interface SettingsResponse {

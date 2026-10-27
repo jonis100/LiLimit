@@ -316,6 +316,43 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div
+            id="tabSwitchCountsAsVisitRow"
+            class="setting-row setting-row-clickable"
+            role="button"
+            tabindex="0"
+            aria-label="Toggle counting tab switches as visits"
+          >
+            <div class="setting-info">
+              <span class="setting-label">Count Tab Switches as Visits</span>
+              <span class="setting-desc">
+                Controls when a visit is counted.
+                <span class="info-icon" tabindex="0" aria-describedby="tab-switch-tooltip">
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <span class="tooltip" id="tab-switch-tooltip"
+                    >On: switching back to a site's tab counts. Off: only opening the site
+                    counts.</span
+                  >
+                </span>
+              </span>
+            </div>
+            <label class="toggle" aria-hidden="true">
+              <input type="checkbox" id="tabSwitchCountsAsVisit" tabindex="-1" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 
