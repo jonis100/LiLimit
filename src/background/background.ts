@@ -1,5 +1,6 @@
 import { extractHostname, limits_to_string } from '../shared/utils.js';
 import type { TimeLeftItem } from '../shared/types.js';
+import { setupThemeIcon } from './theme-icon.js';
 
 interface VisitCounts {
   [hostname: string]: number;
@@ -827,4 +828,5 @@ async function main(): Promise<void> {
   }
 }
 
+setupThemeIcon();
 main();
