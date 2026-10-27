@@ -4,7 +4,7 @@
   "description": "This extension allows you to limit the number of visits per day or the duration of each visit to any website",
   "type": "module",
   "scripts": {
-    "copy:static": "mkdir -p dist && cp manifest.json dist/ && cp public/popup.html public/popup.css dist/ && cp -r public/pages dist/ && cp -r public/images dist/",
+    "copy:static": "mkdir -p dist && cp manifest.json dist/ && cp public/popup.html public/popup.css public/offscreen.html dist/ && cp -r public/pages dist/ && cp -r public/images dist/",
     "compile": "tsc",
     "build": "npm run copy:static && npm run compile",
     "watch": "npm run copy:static && tsc --watch",

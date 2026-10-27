@@ -9,7 +9,7 @@
     "48": "images/icons/lily-48.png",
     "128": "images/icons/lily-128.png"
   },
-  "permissions": ["tabs", "alarms", "storage"],
+  "permissions": ["tabs", "alarms", "storage", "offscreen"],
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
